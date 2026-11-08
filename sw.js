@@ -4,7 +4,7 @@
    sube el número de VERSION (v1 → v2 → v3...) para que el celular
    descargue la versión nueva. Tus datos NO se borran al actualizar.
    ============================================================ */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `mi-panel-${VERSION}`;
 
 const ARCHIVOS = [
@@ -25,17 +25,22 @@ const ARCHIVOS = [
   'fuentes/figtree.woff2',
   'iconos/icono-192.png',
   'iconos/icono-512.png',
+  'iconos/icono-maskable-192.png',
+  'iconos/icono-maskable-512.png',
   'iconos/apple-touch-icon.png',
 ];
 
-// Al instalar: descarga y guarda todos los archivos.
+// Al instalar: descarga y guarda todos los archivos, y se activa enseguida (skipWaiting)
+// para que el celular use la versión nueva sin tener que cerrar la app.
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' }))))
+    caches.open(CACHE)
+      .then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Al activar: borra las cachés de versiones anteriores.
+// Al activar: borra las cachés de versiones anteriores y toma el control de la app abierta (clients.claim).
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
@@ -44,7 +49,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// La app pide actualizarse cuando el usuario toca "Actualizar".
+// Por si una versión quedó esperando, la app puede pedirle que se active.
 self.addEventListener('message', (e) => {
   if (e.data === 'saltar') self.skipWaiting();
 });

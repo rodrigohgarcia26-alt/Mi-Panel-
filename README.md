@@ -56,15 +56,22 @@ Después ábrela desde su ícono. Ya funciona sin internet.
 Tus datos viven en el celular, no en GitHub, así que subir archivos nuevos no los borra.
 
 1. Cambia lo que quieras en los archivos.
-2. Abre `sw.js` y sube el número de versión: `const VERSION = 'v1';` → `'v2'` (la siguiente vez `'v3'`, etc.).
+2. Abre `sw.js` y sube el número de versión: `const VERSION = 'v2';` → `'v3'` (la siguiente vez `'v4'`, etc.).
    **Si no cambias este número, el celular seguirá mostrando la versión vieja.**
 3. En GitHub: **Add file → Upload files**, arrastra los archivos cambiados (incluyendo `sw.js`) → **Commit changes**.
-4. Abre la app con internet. Saldrá el aviso "Hay una versión nueva" → toca **Actualizar**.
-   Si no sale, ciérrala por completo y ábrela de nuevo.
+4. Abre la app con internet. La versión nueva se instala sola y la app se recarga una vez.
+   Si no cambia, ciérrala por completo y ábrela de nuevo.
 
 Por seguridad, antes de una actualización grande: **Ajustes → Exportar**.
 
 ## Datos
 
-Todo se guarda en `localStorage` bajo la clave `mi-panel-datos`, como un JSON con campo `version`.
+Todo se guarda en `localStorage`:
+
+- `mi-panel-datos`: tareas, hábitos, dinero, notas, etc., como un JSON con campo `version` (ahora **2**).
+- `mipanel-tema`: `claro` u `oscuro` (si no existe, se sigue el tema del celular).
+- `mipanel-orden`: orden de las tarjetas de Hoy.
+
+Al pasar de la versión 1 a la 2, la app deja una copia intacta de tus datos anteriores en
+`mi-panel-datos-v1-respaldo`, mueve el tema y el orden a sus claves nuevas y agrega la tarjeta "Mañana".
 Si en el futuro cambia la estructura, `normalizar()` en `js/datos.js` es el lugar para convertir los datos viejos.

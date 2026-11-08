@@ -5,17 +5,17 @@
 
 const Datos = (() => {
   const CLAVE = 'mi-panel-datos';
-  const VERSION = 1;
-  const TARJETAS_HOY = ['tareas', 'habitos', 'dinero', 'notas'];
+  const CLAVE_TEMA = 'mipanel-tema';    // 'claro' | 'oscuro' (si no existe, se sigue el tema del celular)
+  const CLAVE_ORDEN = 'mipanel-orden';  // orden de las tarjetas de Hoy, como JSON
+  const VERSION = 2;
+  const TARJETAS_HOY = ['tareas', 'habitos', 'dinero', 'manana', 'notas'];
   const HABITOS_INICIALES = ['Tomar agua', 'Estudiar o leer 1 hora', 'Hacer ejercicio', 'Dormir', 'Comer a mis horas'];
 
   /** Estructura vacía. */
   function vacio() {
     return {
       version: VERSION,
-      tema: null,                 // null = seguir el tema del celular; 'claro' | 'oscuro'
-      ordenHoy: [...TARJETAS_HOY],
-      tareas: [],                 // {id, texto, fecha, area, prioridad, hecha, hechaEn, creada, ejemplo}
+      tareas: [],                 // {id, texto, fecha, hora, area, prioridad, hecha, hechaEn, creada, ejemplo}
       habitos: [],                // {id, nombre, dias: {"AAAA-MM-DD": true}, creado}
       marcasEjemplo: [],          // [[idHabito, "AAAA-MM-DD"], ...] marcas puestas por los ejemplos
       movimientos: [],            // {id, tipo: 'gasto'|'ingreso', monto, categoria, fecha, nota, ejemplo}
@@ -39,9 +39,10 @@ const Datos = (() => {
     const ahora = new Date().toISOString();
 
     d.tareas = [
-      { id: U.id(), texto: 'Entregar reporte de laboratorio', fecha: ayer, area: 'Escuela', prioridad: 'Alta', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
-      { id: U.id(), texto: 'Repasar los apuntes de la semana', fecha: hoy, area: 'Escuela', prioridad: 'Normal', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
-      { id: U.id(), texto: 'Llamar a mi familia', fecha: hoy, area: 'Personal', prioridad: 'Normal', hecha: true, hechaEn: ahora, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Entregar reporte de laboratorio', fecha: ayer, hora: null, area: 'Escuela', prioridad: 'Alta', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Repasar los apuntes de la semana', fecha: hoy, hora: null, area: 'Escuela', prioridad: 'Normal', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Llamar a mi familia', fecha: hoy, hora: null, area: 'Personal', prioridad: 'Normal', hecha: true, hechaEn: ahora, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Examen de matemáticas', fecha: U.sumarDias(hoy, 1), hora: '09:00', area: 'Escuela', prioridad: 'Alta', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
     ];
     d.habitos = HABITOS_INICIALES.map((nombre) => ({ id: U.id(), nombre, dias: {}, creado: ahora }));
     // Algunas marcas de ejemplo: 3 de 5 hoy y un poco de historia en la semana.
@@ -71,23 +72,54 @@ const Datos = (() => {
     return d;
   }
 
+  // ---------- Lectura/escritura segura de claves sueltas ----------
+  const leerClave = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const ponerClave = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* bloqueado */ } };
+
+  /** Deja el orden con las 5 tarjetas exactamente una vez. "Mañana" entra antes de "Notas". */
+  function limpiarOrden(lista) {
+    const orden = Array.isArray(lista) ? lista.filter((t, i, a) => TARJETAS_HOY.includes(t) && a.indexOf(t) === i) : [];
+    TARJETAS_HOY.forEach((t) => {
+      if (orden.includes(t)) return;
+      const iNotas = orden.indexOf('notas');
+      if (t === 'manana' && iNotas >= 0) orden.splice(iNotas, 0, t); else orden.push(t);
+    });
+    return orden;
+  }
+
   /** Completa campos que falten y actualiza datos de versiones anteriores. */
   function normalizar(entrada) {
     const base = vacio();
     const d = Object.assign(base, entrada || {});
-    // (Aquí irán las migraciones cuando exista la versión 2: if (d.version < 2) {...})
+
+    // ----- Migración v1 → v2 -----
+    // El tema y el orden de Hoy pasan a sus propias claves ("mipanel-tema", "mipanel-orden").
+    // Solo se copian si esas claves aún no existen, para no pisar lo que ya elegiste.
+    if (!(d.version >= 2)) {
+      if (['claro', 'oscuro'].includes(d.tema) && !leerClave(CLAVE_TEMA)) ponerClave(CLAVE_TEMA, d.tema);
+      if (Array.isArray(d.ordenHoy) && !leerClave(CLAVE_ORDEN)) ponerClave(CLAVE_ORDEN, JSON.stringify(limpiarOrden(d.ordenHoy)));
+    }
+    delete d.tema;
+    delete d.ordenHoy;
+
     for (const k of ['tareas', 'habitos', 'marcasEjemplo', 'movimientos', 'notas', 'metas']) if (!Array.isArray(d[k])) d[k] = [];
     for (const k of ['animo', 'revisiones']) if (!d[k] || typeof d[k] !== 'object') d[k] = {};
     d.habitos.forEach((h) => { if (!h.dias || typeof h.dias !== 'object') h.dias = {}; });
-    // El orden de Hoy debe tener las 4 tarjetas exactamente una vez.
-    const orden = Array.isArray(d.ordenHoy) ? d.ordenHoy.filter((t, i, a) => TARJETAS_HOY.includes(t) && a.indexOf(t) === i) : [];
-    TARJETAS_HOY.forEach((t) => { if (!orden.includes(t)) orden.push(t); });
-    d.ordenHoy = orden;
+    d.tareas.forEach((t) => { if (!/^\d{2}:\d{2}$/.test(t.hora || '')) t.hora = null; });
     if (!(Number(d.presupuesto) >= 0)) d.presupuesto = 3000;
-    if (!['claro', 'oscuro'].includes(d.tema)) d.tema = null;
     d.version = VERSION;
     return d;
   }
+
+  // ---------- Tema y orden de Hoy (claves aparte) ----------
+  function tema() { const t = leerClave(CLAVE_TEMA); return ['claro', 'oscuro'].includes(t) ? t : null; }
+  function ponerTema(t) { ponerClave(CLAVE_TEMA, ['claro', 'oscuro'].includes(t) ? t : null); }
+  function orden() {
+    let o = null;
+    try { o = JSON.parse(leerClave(CLAVE_ORDEN)); } catch (e) { /* dañado: se usa el de siempre */ }
+    return limpiarOrden(o);
+  }
+  function ponerOrden(o) { ponerClave(CLAVE_ORDEN, JSON.stringify(limpiarOrden(o))); }
 
   let d;
   function cargar() {
@@ -95,7 +127,15 @@ const Datos = (() => {
     try { crudo = localStorage.getItem(CLAVE); } catch (e) { /* almacenamiento bloqueado */ }
     if (!crudo) { d = conEjemplos(); guardar(); return d; }
     try {
-      d = normalizar(JSON.parse(crudo));
+      const leido = JSON.parse(crudo);
+      const versionAnterior = leido && leido.version;
+      d = normalizar(leido);
+      if (versionAnterior !== VERSION) {
+        // Antes de guardar en el formato nuevo, se deja una copia intacta de los datos anteriores.
+        const copia = `${CLAVE}-v${versionAnterior}-respaldo`;
+        if (!leerClave(copia)) ponerClave(copia, crudo);
+        guardar();
+      }
     } catch (e) {
       // Si el JSON está dañado, se guarda una copia aparte para no perderlo y se empieza de nuevo.
       try { localStorage.setItem(CLAVE + '-danado-' + Date.now(), crudo); } catch (e2) { /* sin espacio */ }
@@ -130,9 +170,7 @@ const Datos = (() => {
   const hayEjemplos = () => d.tareas.some((t) => t.ejemplo) || d.movimientos.some((m) => m.ejemplo) || d.notas.some((n) => n.ejemplo) || d.marcasEjemplo.length > 0;
 
   function borrarTodo() {
-    const tema = d.tema;
-    d = vacio();
-    d.tema = tema;
+    d = vacio();      // el tema y el orden de Hoy se conservan (están en otras claves)
     guardar();
   }
 
@@ -190,5 +228,6 @@ const Datos = (() => {
     get d() { return d; },
     cargar, guardar, foto, restaurar, borrarEjemplos, hayEjemplos, borrarTodo, olvidarMarcaEjemplo,
     exportar, leerRespaldo, importar, pedirPersistencia, VERSION,
+    tema, ponerTema, orden, ponerOrden,
   };
 })();

@@ -28,7 +28,7 @@ const PDinero = (() => {
   let tipo = 'gasto';
 
   function render(cont) {
-    if (!mes) mes = U.mesDe(U.hoy());
+    mes = U.mesDe(U.hoy()); // siempre abre en el mes actual
     cont.innerHTML = `
       <div class="tarjeta navegador" id="nav-mes"></div>
       <div class="resumen3" id="resumen"></div>
@@ -40,8 +40,9 @@ const PDinero = (() => {
         </div>
         <div id="presu-detalle"></div>
       </section>
-      <form class="tarjeta form" id="f-mov" novalidate>
-        <h2 class="tarjeta-titulo" style="margin:0">Nuevo movimiento</h2>
+      <details class="tarjeta desplegable agregar" id="d-mov">
+      <summary><span class="grupo-titulo">${U.I.mas} Nuevo movimiento</span><span class="flecha" aria-hidden="true">›</span></summary>
+      <form class="form contenido" id="f-mov" novalidate>
         <fieldset class="segmentado">
           <legend class="solo-lector">Tipo de movimiento</legend>
           <div class="segmentos">
@@ -58,6 +59,7 @@ const PDinero = (() => {
         <div class="campo"><label for="m-nota">Nota (opcional)</label><input id="m-nota" type="text" maxlength="80" placeholder="Ej. Tacos con amigos" autocomplete="off" enterkeyhint="done"></div>
         <button class="btn primario ancho" type="submit">Guardar</button>
       </form>
+      </details>
       <section class="tarjeta" aria-labelledby="t-cat"><h2 id="t-cat">En qué se va el dinero</h2><div id="categorias"></div></section>
       <section class="tarjeta" aria-labelledby="t-movs"><h2 id="t-movs">Movimientos del mes</h2><ul class="lista" id="movimientos"></ul></section>`;
 
@@ -103,7 +105,7 @@ const PDinero = (() => {
     cont.addEventListener('click', (e) => {
       const n = e.target.closest('[data-mes]');
       if (n) {
-        mes = U.sumarMeses(mes, Number(n.dataset.mes));
+        mes = n.dataset.mes === 'hoy' ? U.mesDe(U.hoy()) : U.sumarMeses(mes, Number(n.dataset.mes));
         fechaPorDefecto(cont);
         return pintar(cont);
       }
@@ -135,7 +137,9 @@ const PDinero = (() => {
 
     cont.querySelector('#nav-mes').innerHTML = `
       <button type="button" class="btn-icono" data-mes="-1" aria-label="Mes anterior">${U.I.izq}</button>
-      <p class="navegador-titulo" aria-live="polite">${U.nombreMes(mes)}${mes === mesHoy ? '<small>Este mes</small>' : ''}</p>
+      <div class="navegador-titulo" aria-live="polite">${U.nombreMes(mes)}${mes === mesHoy
+        ? '<small>Este mes</small>'
+        : '<button type="button" class="btn-texto este-mes" data-mes="hoy">Ir a este mes</button>'}</div>
       <button type="button" class="btn-icono" data-mes="1" aria-label="Mes siguiente">${U.I.der}</button>`;
 
     cont.querySelector('#resumen').innerHTML = `

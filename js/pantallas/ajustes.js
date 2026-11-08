@@ -22,11 +22,11 @@ const PAjustes = (() => {
         <div class="interruptor-zona">
           <div>
             <h2 id="t-tema" style="font-size:1.15rem">Modo oscuro</h2>
-            <p class="texto2 chico">${Datos.d.tema ? 'Elegido por ti' : 'Sigue el tema del celular'}</p>
+            <p class="texto2 chico">${Datos.tema() ? 'Elegido por ti' : 'Sigue el tema del celular'}</p>
           </div>
           <button type="button" class="interruptor" role="switch" aria-checked="${oscuro}" aria-labelledby="t-tema" data-accion="tema"></button>
         </div>
-        ${Datos.d.tema ? '<button type="button" class="btn-texto" data-accion="tema-sistema">Usar el tema del celular</button>' : ''}
+        ${Datos.tema() ? '<button type="button" class="btn-texto" data-accion="tema-sistema">Usar el tema del celular</button>' : ''}
       </section>
 
       <section class="tarjeta" aria-labelledby="t-resp">

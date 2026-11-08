@@ -73,6 +73,23 @@ const U = (() => {
     return (Number.isInteger(v) ? fmtEntero : fmtCentavos).format(v);
   };
   const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  /** ["a","b","c"] → "a, b y c" */
+  const unirY = (l) => l.length < 2 ? (l[0] || '') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`;
+  /** Primera letra en minúscula (para frases como "Faltan: hacer ejercicio"). */
+  const minus = (s) => s.charAt(0).toLocaleLowerCase('es-MX') + s.slice(1);
+  /** "09:30" → "9:30" */
+  const hora = (hhmm) => hhmm ? hhmm.replace(/^0(\d)/, '$1') : '';
+
+  /** Anillo de avance (SVG). n de total, con el texto "n/total" al centro. */
+  function anillo(n, total, tam = 64) {
+    const r = 26, c = 2 * Math.PI * r;
+    const p = total ? Math.min(1, n / total) : 0;
+    return `<svg class="anillo" viewBox="0 0 64 64" width="${tam}" height="${tam}" role="img" aria-label="${n} de ${total}">
+      <circle cx="32" cy="32" r="${r}" class="anillo-pista"/>
+      <circle cx="32" cy="32" r="${r}" class="anillo-avance ${p >= 1 ? 'completo' : ''}" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 32 32)"/>
+      <text x="32" y="32" dy=".35em" text-anchor="middle">${n}/${total}</text>
+    </svg>`;
+  }
 
   // ---------- Texto seguro para insertar en HTML ----------
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -149,11 +166,13 @@ const U = (() => {
     habitos: svg('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M14.5 17l2 2 3.5-3.8"/>'),
     dinero: svg('<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.3"/>'),
     notas: svg('<path d="M6 3.5h9l4 4v13H6z"/><path d="M14.5 3.5v4.5h4.5M9 12.5h7M9 16h5"/>'),
+    mas: svg('<path d="M12 5.5v13M5.5 12h13"/>'),
+    manana: svg('<path d="M3 17.5h18M6.5 17.5a5.5 5.5 0 0 1 11 0M12 6.5v2.5M5.2 10.2l1.6 1.6M18.8 10.2l-1.6 1.6M7 21h10"/>'),
   };
 
   return {
     hoy, aISO, aFecha, sumarDias, difDias, inicioSemana, mesDe, sumarMeses, diasEnMes, cap,
     nombreDia, diaCorto, nombreMes, fechaCorta, fechaLarga, rango, momento, haceDias, etiquetaFecha,
-    dinero, plural, esc, id, aviso, confirmar, I, MESES,
+    dinero, plural, unirY, minus, hora, anillo, esc, id, aviso, confirmar, I, MESES,
   };
 })();

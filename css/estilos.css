@@ -300,59 +300,98 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--acento); ou
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
 
 /* ============================================================
-   HOY
+   HOY: cuadrícula de 2 columnas
    ============================================================ */
-.hoy-lista { position: relative; display: flex; flex-direction: column; gap: 14px; }
-.tarjeta-hoy {
-  position: relative;
-  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-  transition: box-shadow .18s ease, transform .18s ease;
-  touch-action: manipulation;
+.hoy-rejilla {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  grid-auto-flow: row dense;   /* si dos medianas quedan separadas, se acomodan sin dejar huecos */
 }
-.tarjeta-hoy textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
-.tarjeta-hoy[data-ir] { cursor: pointer; }
-.tarjeta-hoy[data-ir]:active:not(.levantada) { background: color-mix(in srgb, var(--tarjeta) 94%, var(--texto)); }
+.tarjeta-hoy {
+  position: relative; padding: 14px; min-width: 0;
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  transition: box-shadow .18s ease, transform .18s ease, outline-color .18s ease;
+  touch-action: manipulation; cursor: pointer;
+}
+.tarjeta-hoy.ancha { grid-column: span 2; }
+.tarjeta-hoy input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+.tarjeta-hoy:active:not(.levantada) { background: color-mix(in srgb, var(--tarjeta) 94%, var(--texto)); }
 .tarjeta-hoy.levantada {
   z-index: 10; box-shadow: var(--sombra-alta); border-color: var(--acento);
   transition: box-shadow .18s ease; cursor: grabbing;
 }
-.hoy-lista.arrastrando .tarjeta-hoy:not(.levantada) { transition: none; }
-.th-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.th-cab h2 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+.tarjeta-hoy.destino { outline: 3px dashed var(--acento); outline-offset: -3px; }
+.tarjeta-hoy.recien { animation: asentar .28s ease; }
+@keyframes asentar { from { transform: scale(.97); } to { transform: none; } }
+.hoy-rejilla.arrastrando .tarjeta-hoy:not(.levantada) { transition: none; }
+
+.th-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.th-cab h2 { font-size: 1.05rem; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .th-icono {
-  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
   background: var(--acento-suave); color: var(--acento); flex-shrink: 0;
 }
-.th-icono svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.th-flecha { font-size: 1.6rem; color: var(--texto2); line-height: 1; }
-.th-grande { font-family: var(--fuente-titulo); font-size: 1.6rem; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
-.th-linea { display: flex; gap: 6px; align-items: baseline; margin-top: 6px; }
-.th-linea + .barra, .barra + .th-linea { margin-top: 8px; }
-.th-urgente { margin-top: 2px; padding: 10px 12px; background: var(--fondo); border-radius: 12px; }
-.th-urgente .t { font-weight: 650; display: block; }
-.th-sep { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.nota-acciones { display: flex; justify-content: flex-end; margin-top: 10px; }
-.ultima-nota { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--linea); }
-.ultima-nota .cuando { font-size: .85rem; color: var(--texto2); margin-bottom: 3px; }
-.ultima-nota .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
-.notas-anteriores { margin-top: 8px; }
-.notas-anteriores summary { cursor: pointer; color: var(--acento); font-weight: 650; min-height: 44px; display: flex; align-items: center; }
-.notas-anteriores ul { list-style: none; margin: 0; padding: 0; }
-.notas-anteriores li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--linea); }
-.notas-anteriores li > div { flex: 1; min-width: 0; }
+.th-icono svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.th-n { font-size: .82rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--pista); color: var(--texto2); }
+.th-flecha { font-size: 1.5rem; color: var(--texto2); line-height: 1; }
+.th-vacio { color: var(--texto2); font-size: .95rem; }
+.th-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.th-lista li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.th-lista .t { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-lista .cuando { font-size: .82rem; font-weight: 650; color: var(--texto2); white-space: nowrap; }
+.th-lista .cuando.rojo { color: var(--rojo); }
+.th-lista .cuando.azul { color: var(--acento); }
+.punto-alta, .punto-normal { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.punto-alta { background: var(--rojo); }
+.punto-normal { background: var(--linea); }
+.th-mas { font-size: .85rem; color: var(--texto2); margin-top: 6px; }
+.th-anillo { display: flex; justify-content: center; margin: 2px 0 6px; }
+.th-faltan { font-size: .85rem; color: var(--texto2); text-align: center; line-height: 1.3; }
+.th-grande { font-family: var(--fuente-titulo); font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; }
+.th-sub { font-size: .85rem; color: var(--texto2); margin: 2px 0 8px; }
+.th-sub:last-child { margin-bottom: 0; margin-top: 8px; }
+.th-nota { white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nota-rapida { display: flex; gap: 8px; margin-top: 10px; }
+.nota-rapida input { flex: 1; min-width: 0; min-height: 44px; padding: 8px 12px; }
 .aviso { display: flex; align-items: center; gap: 12px; justify-content: space-between; border-color: var(--ambar); background: var(--ambar-suave); }
+
+.th-linea { display: flex; gap: 6px; align-items: baseline; margin-top: 6px; }
+.barra + .th-linea { margin-top: 8px; }
+.presu-cab input::-webkit-inner-spin-button, .presu-cab input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.presu-cab input { -moz-appearance: textfield; }
+
+/* Anillo de avance */
+.anillo { display: block; flex-shrink: 0; }
+.anillo-pista { fill: none; stroke: var(--pista); stroke-width: 7; }
+.anillo-avance { fill: none; stroke: var(--acento); stroke-width: 7; stroke-linecap: round; transition: stroke-dasharray .3s ease; }
+.anillo-avance.completo { stroke: var(--verde); }
+.anillo text { font-family: var(--fuente-titulo); font-weight: 700; font-size: 15px; fill: var(--texto); }
+
+/* ---------- Desplegables (agregar tarea, hábito, movimiento; grupos) ---------- */
+.desplegable > summary {
+  list-style: none; cursor: pointer; min-height: 44px; margin: -6px 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.desplegable > summary::-webkit-details-marker { display: none; }
+.desplegable > summary .flecha { font-size: 1.6rem; line-height: 1; color: var(--texto2); transition: transform .2s ease; }
+.desplegable[open] > summary .flecha { transform: rotate(90deg); }
+.desplegable > .contenido { margin-top: 14px; }
+.desplegable.agregar > summary .grupo-titulo { color: var(--acento); }
+.grupo-titulo { font-family: var(--fuente-titulo); font-size: 1.1rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+.grupo-titulo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.grupo-titulo .n { font-family: var(--fuente-texto); font-size: .82rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--pista); color: var(--texto2); }
 
 /* ============================================================
    TAREAS
    ============================================================ */
-.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px; margin: 0 -2px; scrollbar-width: none; }
-.chips::-webkit-scrollbar { display: none; }
+/* Los 4 filtros caben siempre en una fila: nombre arriba y número abajo. */
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .chip {
-  flex-shrink: 0; min-height: 44px; padding: 8px 14px; border-radius: 99px;
+  min-width: 0; min-height: 52px; padding: 6px 4px; border-radius: 14px;
   border: 1px solid var(--linea); background: var(--tarjeta); color: var(--texto);
-  font-weight: 650; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  font-weight: 650; font-size: .86rem; line-height: 1.15; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center;
 }
-.chip .n { min-width: 22px; padding: 1px 7px; border-radius: 99px; background: var(--pista); font-size: .82rem; text-align: center; }
+.chip .n { min-width: 24px; padding: 0 7px; border-radius: 99px; background: var(--pista); font-size: .8rem; text-align: center; }
 .chip[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--sobre-acento); }
 .chip[aria-pressed="true"] .n { background: rgba(255,255,255,.22); }
 
@@ -392,10 +431,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--acento); ou
 .dia-col.hoy b { color: var(--acento); text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 5px; }
 .habito { padding: 10px 0 6px; border-bottom: 1px solid var(--linea); }
 .habito:last-child { border-bottom: 0; }
-.habito-cab { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
-.habito-cab > div { flex: 1; min-width: 0; padding-top: 4px; }
-.habito-nombre { font-weight: 700; overflow-wrap: anywhere; }
-.habito-datos { font-size: .85rem; color: var(--texto2); }
+.habito-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.habito-nombre { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+.habito-racha { font-size: .9rem; color: var(--texto2); white-space: nowrap; }
+.habito-racha b { font-family: var(--fuente-titulo); color: var(--ambar); font-size: 1.05rem; }
+.leyenda-racha { margin-top: 8px; }
 .casilla {
   height: 44px; border: 0; background: none; padding: 0; cursor: pointer;
   display: grid; place-items: center; color: #fff;
@@ -407,9 +447,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--acento); ou
 .casilla svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
 .casilla[aria-pressed="true"] span { background: var(--verde); border-color: var(--verde); }
 .casilla[aria-pressed="true"] svg { opacity: 1; }
-.casilla.es-hoy span { border-color: var(--acento); }
-.casilla.es-hoy[aria-pressed="true"] span { border-color: var(--verde); }
-.casilla:disabled { cursor: default; opacity: .35; }
+.casilla.es-hoy span { border: 2px dashed var(--acento); background: var(--acento-suave); }
+.casilla.es-hoy[aria-pressed="true"] span { border: 2px solid var(--verde); background: var(--verde); }
 .form-linea { display: flex; gap: 8px; }
 .form-linea input { flex: 1; min-width: 0; }
 
@@ -487,6 +526,82 @@ input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border-radius
 .botones2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .pila { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .pie { text-align: center; font-size: .82rem; color: var(--texto2); padding: 6px 0; }
+
+
+/* ---------- Tareas: grupos ---------- */
+.grupos { display: flex; flex-direction: column; gap: 14px; }
+.grupo { padding: 12px 14px; }
+.grupo > .grupo-titulo { margin-bottom: 2px; }
+.grupo .lista .vacio { padding: 10px 4px; text-align: left; }
+.btn-icono.quitar { color: var(--texto2); }
+.btn-icono.quitar:hover, .btn-icono.quitar:focus-visible { color: var(--rojo); }
+.atrasadas { border: 2px solid var(--rojo); }
+.atrasadas > .grupo-titulo { color: var(--rojo); }
+.atrasadas.sin { padding-top: 10px; padding-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.atrasadas.sin > .grupo-titulo { margin: 0; }
+.atrasadas.fija {
+  position: sticky; top: calc(6px + env(safe-area-inset-top)); z-index: 5;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+}
+/* Si hay muchas atrasadas, la tarjeta fija no tapa toda la pantalla: se desplaza por dentro. */
+.atrasadas-lista { max-height: 38vh; overflow-y: auto; overscroll-behavior: contain; }
+.resumen-cerrado { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.desplegable > summary:has(.sum-fila) { flex-direction: column; align-items: stretch; }
+.sum-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.desplegable[open] .resumen-cerrado { display: none; }
+.resumen-cerrado { margin: 0 0 8px; }
+.resumen-linea { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.resumen-linea .rotulo {
+  font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--acento); width: 62px; flex-shrink: 0;
+}
+.resumen-linea:nth-child(2) .rotulo { color: var(--rojo); }
+.resumen-linea .t { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resumen-linea .chico { white-space: nowrap; }
+
+/* ---------- Hábitos: resumen y gráfica ---------- */
+.resumen-habitos { display: flex; align-items: center; gap: 16px; }
+.resumen-habitos .anillo text { font-size: 14px; }
+.resumen-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.resumen-texto .grande { font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 700; }
+.texto { color: var(--texto); }
+.semana-cab .rejilla7 { padding-bottom: 6px; border-bottom: 1px solid var(--linea); margin-bottom: 2px; }
+.semana-cab > span { display: none; }
+.quitar-habito { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--linea); }
+
+.grafica-modo { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 10px; }
+.grafica-modo button {
+  min-height: 40px; border: 0; border-radius: 9px; background: transparent;
+  font-weight: 650; color: var(--texto2); cursor: pointer;
+}
+.grafica-modo button[aria-pressed="true"] { background: var(--tarjeta); color: var(--texto); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+.grafica-svg { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; cursor: crosshair; }
+.grafica-mes { display: flex; }
+.grafica-ejey { flex-shrink: 0; }
+.grafica-desliza { overflow-x: auto; overflow-y: hidden; flex: 1; min-width: 0; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.grafica-desliza .grafica-svg { width: auto; max-width: none; }
+.g-linea { fill: none; stroke: var(--acento); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.g-punto { fill: var(--acento); stroke: var(--tarjeta); stroke-width: 2; }
+.g-rejilla { stroke: var(--linea); stroke-width: 1; stroke-dasharray: 2 4; }
+.g-base { stroke: var(--linea); stroke-width: 1; }
+.g-mes { stroke: var(--texto2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .6; }
+.g-cruz { stroke: var(--texto2); stroke-width: 1; }
+.g-eje { font-size: 11px; fill: var(--texto2); font-family: var(--fuente-texto); }
+.g-num { font-weight: 700; fill: var(--texto); font-size: 12px; }
+.g-hoy { fill: var(--acento); font-weight: 800; }
+.g-valor { font-size: 12px; font-weight: 700; fill: var(--texto); font-family: var(--fuente-texto); }
+.g-mes-nombre { font-size: 13px; font-weight: 700; fill: var(--texto); font-family: var(--fuente-titulo); }
+.grafica-info { margin-top: 6px; min-height: 1.3em; }
+
+/* ---------- Dinero ---------- */
+.navegador-titulo .este-mes { display: block; margin: 0 auto; min-height: 32px; padding: 2px 6px; font-size: .85rem; }
+
+/* ---------- Más: notas ---------- */
+#t-notas + .nota-rapida { margin-top: 0; }
+.notas-lista { margin-top: 8px; }
+.nota { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--linea); }
+.nota > div { flex: 1; min-width: 0; padding-top: 4px; }
+.nota .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

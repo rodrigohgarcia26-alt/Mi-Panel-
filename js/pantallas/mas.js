@@ -1,5 +1,5 @@
 /* ============================================================
-   Pantalla MÁS: revisión de la semana y metas
+   Pantalla MÁS: notas, revisión de la semana y metas
    ============================================================ */
 'use strict';
 
@@ -38,6 +38,15 @@ const PMas = (() => {
 
   function render(cont) {
     cont.innerHTML = `
+      <section class="tarjeta" aria-labelledby="t-notas">
+        <h2 id="t-notas">Notas</h2>
+        <form class="nota-rapida" id="f-nota" novalidate>
+          <label for="nota-nueva" class="solo-lector">Nota rápida</label>
+          <input id="nota-nueva" type="text" maxlength="2000" placeholder="Nota rápida…" autocomplete="off" enterkeyhint="done">
+          <button type="submit" class="btn primario chico">Guardar</button>
+        </form>
+        <ul class="lista notas-lista" id="notas"></ul>
+      </section>
       <section class="tarjeta" aria-labelledby="t-rev">
         <h2 id="t-rev">Revisión de la semana</h2>
         <div class="navegador" id="nav-rev" style="padding:0 0 10px"></div>
@@ -58,8 +67,30 @@ const PMas = (() => {
       </section>`;
     pintarRevision(cont);
     pintarMetas(cont);
+    pintarNotas(cont);
+
+    cont.querySelector('#f-nota').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const inp = cont.querySelector('#nota-nueva');
+      const texto = inp.value.trim();
+      if (!texto) { inp.focus(); return U.aviso('Escribe algo antes de guardar.'); }
+      Datos.d.notas.push({ id: U.id(), texto, fecha: new Date().toISOString(), ejemplo: false });
+      Datos.guardar();
+      inp.value = '';
+      pintarNotas(cont);
+      U.aviso('Nota guardada.');
+    });
 
     cont.addEventListener('click', (e) => {
+      const bn = e.target.closest('[data-borrar-nota]');
+      if (bn) {
+        const antes = Datos.foto();
+        Datos.d.notas = Datos.d.notas.filter((n) => n.id !== bn.dataset.borrarNota);
+        Datos.guardar();
+        pintarNotas(cont);
+        return App.conDeshacer('Nota borrada.', antes);
+      }
+
       const n = e.target.closest('[data-semana]');
       if (n && !n.disabled) { semanasAtras = Math.max(0, semanasAtras + Number(n.dataset.semana)); return pintarRevision(cont); }
 
@@ -162,6 +193,15 @@ const PMas = (() => {
         <textarea id="rev-mejorar" data-rev="mejorar" rows="3" maxlength="2000" placeholder="Algo que quieras hacer distinto…">${U.esc(rev.mejorar)}</textarea>
       </div>
       <p class="guardado" id="rev-guardado" aria-live="polite"></p>`;
+  }
+
+  function pintarNotas(cont) {
+    const notas = [...Datos.d.notas].sort((a, b) => b.fecha.localeCompare(a.fecha));
+    cont.querySelector('#notas').innerHTML = notas.length ? notas.map((n) => `
+      <li class="nota">
+        <div><p class="txt">${U.esc(n.texto)}</p><p class="texto2 chico">${U.momento(n.fecha)}</p></div>
+        <button type="button" class="btn-icono quitar" data-borrar-nota="${n.id}" aria-label="Borrar nota del ${U.momento(n.fecha)}">${U.I.x}</button>
+      </li>`).join('') : '<li class="vacio">Aún no tienes notas.</li>';
   }
 
   function pintarMetas(cont) {

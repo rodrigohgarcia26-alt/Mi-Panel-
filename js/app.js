@@ -13,7 +13,7 @@ const App = (() => {
   let fechaPintada = U.hoy();
 
   // ---------- Tema claro / oscuro ----------
-  const temaEfectivo = () => Datos.d.tema || (medioOscuro.matches ? 'oscuro' : 'claro');
+  const temaEfectivo = () => Datos.tema() || (medioOscuro.matches ? 'oscuro' : 'claro');
   function aplicarTema() {
     const t = temaEfectivo();
     document.documentElement.setAttribute('data-theme', t);
@@ -25,8 +25,8 @@ const App = (() => {
       b.setAttribute('aria-label', t === 'oscuro' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
     }
   }
-  function ponerTema(t) { Datos.d.tema = t; Datos.guardar(); aplicarTema(); }
-  medioOscuro.addEventListener('change', () => { if (!Datos.d.tema) { aplicarTema(); if (actual === 'ajustes') refrescar(); } });
+  function ponerTema(t) { Datos.ponerTema(t); aplicarTema(); }
+  medioOscuro.addEventListener('change', () => { if (!Datos.tema()) { aplicarTema(); if (actual === 'ajustes') refrescar(); } });
 
   // ---------- Cabecera de cada pantalla ----------
   function pintarCabecera(nombre) {
@@ -94,28 +94,24 @@ const App = (() => {
   });
 
   // ---------- Modo sin internet (service worker) ----------
+  // La versión nueva se instala sola (skipWaiting + clients.claim en sw.js).
+  // Cuando toma el control, la app se recarga una vez para usar los archivos nuevos.
   function registrarSW() {
     if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
     window.addEventListener('load', async () => {
       try {
         const habiaControl = !!navigator.serviceWorker.controller;
         const reg = await navigator.serviceWorker.register('sw.js');
-        const avisarNueva = (sw) => U.aviso('Hay una versión nueva de la app.', {
-          accion: 'Actualizar', duracion: 20000, alAccion: () => sw.postMessage('saltar'),
-        });
-        if (reg.waiting && navigator.serviceWorker.controller) avisarNueva(reg.waiting);
-        reg.addEventListener('updatefound', () => {
-          const nuevo = reg.installing;
-          if (!nuevo) return;
-          nuevo.addEventListener('statechange', () => {
-            if (nuevo.state === 'installed' && navigator.serviceWorker.controller) avisarNueva(nuevo);
-          });
-        });
+        if (reg.waiting) reg.waiting.postMessage('saltar'); // por si quedó una versión vieja esperando
         let recargando = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (!habiaControl || recargando) return;
           recargando = true;
-          location.reload();
+          // Si estás escribiendo algo, espera a que salgas de la app para no perderlo.
+          const recargar = () => location.reload();
+          const escribiendo = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.value;
+          if (!escribiendo) return recargar();
+          document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') recargar(); }, { once: true });
         });
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible' && navigator.onLine) reg.update().catch(() => {});

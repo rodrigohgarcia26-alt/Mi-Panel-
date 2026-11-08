@@ -19,10 +19,16 @@
   <script>
     // Aplica el tema antes de pintar la página, para que no "parpadee".
     (function () {
+      // "mipanel-tema" guarda tu elección; si no existe, se usa la de la versión anterior o la del celular.
       var tema = null;
-      try { tema = (JSON.parse(localStorage.getItem('mi-panel-datos')) || {}).tema || null; } catch (e) {}
+      try { tema = localStorage.getItem('mipanel-tema'); } catch (e) {}
+      if (tema !== 'claro' && tema !== 'oscuro') {
+        tema = null;
+        try { tema = (JSON.parse(localStorage.getItem('mi-panel-datos')) || {}).tema || null; } catch (e) {}
+      }
       if (!tema) tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro';
       document.documentElement.setAttribute('data-theme', tema);
+      if (tema === 'oscuro') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0E1514');
     })();
   </script>
 </head>
