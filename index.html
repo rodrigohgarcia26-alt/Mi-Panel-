@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mi Panel</title>
+  <meta name="description" content="Mi Panel: tareas, hábitos, dinero y notas. Funciona sin internet.">
+  <meta name="theme-color" content="#F1F4F3">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="iconos/icono-192.png">
+  <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mi Panel">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preload" href="fuentes/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fuentes/figtree.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/estilos.css">
+  <script>
+    // Aplica el tema antes de pintar la página, para que no "parpadee".
+    (function () {
+      var tema = null;
+      try { tema = (JSON.parse(localStorage.getItem('mi-panel-datos')) || {}).tema || null; } catch (e) {}
+      if (!tema) tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro';
+      document.documentElement.setAttribute('data-theme', tema);
+    })();
+  </script>
+</head>
+<body>
+  <a class="saltar" href="#pantalla">Saltar al contenido</a>
+
+  <div class="app">
+    <header class="cabecera" id="cabecera"></header>
+    <main id="pantalla" class="pantalla" tabindex="-1"></main>
+  </div>
+
+  <nav class="nav-inferior" id="nav" aria-label="Secciones principales">
+    <a href="#hoy" data-seccion="hoy">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+      <span>Hoy</span>
+    </a>
+    <a href="#tareas" data-seccion="tareas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.3"/></svg>
+      <span>Tareas</span>
+    </a>
+    <a href="#habitos" data-seccion="habitos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M14.5 17l2 2 3.5-3.8"/></svg>
+      <span>Hábitos</span>
+    </a>
+    <a href="#dinero" data-seccion="dinero">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.3"/></svg>
+      <span>Dinero</span>
+    </a>
+    <a href="#mas" data-seccion="mas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg>
+      <span>Más</span>
+    </a>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div id="modal-raiz"></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/datos.js"></script>
+  <script src="js/pantallas/hoy.js"></script>
+  <script src="js/pantallas/tareas.js"></script>
+  <script src="js/pantallas/habitos.js"></script>
+  <script src="js/pantallas/dinero.js"></script>
+  <script src="js/pantallas/mas.js"></script>
+  <script src="js/pantallas/ajustes.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

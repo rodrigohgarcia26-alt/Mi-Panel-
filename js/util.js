@@ -1,0 +1,159 @@
+/* ============================================================
+   Utilidades: fechas, dinero, texto seguro, avisos e íconos
+   ============================================================ */
+'use strict';
+
+const U = (() => {
+  const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const DIAS_C = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+  // ---------- Fechas (siempre como texto "AAAA-MM-DD" en hora local) ----------
+  const dos = (n) => String(n).padStart(2, '0');
+  const aISO = (d) => `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
+  const hoy = () => aISO(new Date());
+  const aFecha = (iso) => { const [a, m, d] = iso.split('-').map(Number); return new Date(a, m - 1, d); };
+  const sumarDias = (iso, n) => { const d = aFecha(iso); d.setDate(d.getDate() + n); return aISO(d); };
+  /** Días que van de a hasta b (b - a). */
+  const difDias = (a, b) => Math.round((aFecha(b) - aFecha(a)) / 86400000);
+  /** Lunes de la semana de esa fecha. */
+  const inicioSemana = (iso) => { const d = aFecha(iso); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return aISO(d); };
+  const mesDe = (iso) => iso.slice(0, 7);
+  const sumarMeses = (mes, n) => { const [a, m] = mes.split('-').map(Number); const d = new Date(a, m - 1 + n, 1); return `${d.getFullYear()}-${dos(d.getMonth() + 1)}`; };
+  const diasEnMes = (mes) => { const [a, m] = mes.split('-').map(Number); return new Date(a, m, 0).getDate(); };
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const nombreDia = (iso) => DIAS[aFecha(iso).getDay()];
+  const diaCorto = (iso) => DIAS_C[aFecha(iso).getDay()];
+  const nombreMes = (mes) => { const [a, m] = mes.split('-').map(Number); return `${cap(MESES[m - 1])} ${a}`; };
+  /** "lun 10 nov" */
+  const fechaCorta = (iso) => { const d = aFecha(iso); return `${DIAS_C[d.getDay()]} ${d.getDate()} ${MESES_C[d.getMonth()]}`; };
+  /** "lunes 10 de noviembre" */
+  const fechaLarga = (iso) => { const d = aFecha(iso); return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`; };
+  /** "1 – 7 nov" o "29 oct – 4 nov" */
+  const rango = (a, b) => {
+    const da = aFecha(a), db = aFecha(b);
+    return da.getMonth() === db.getMonth()
+      ? `${da.getDate()} – ${db.getDate()} ${MESES_C[db.getMonth()]}`
+      : `${da.getDate()} ${MESES_C[da.getMonth()]} – ${db.getDate()} ${MESES_C[db.getMonth()]}`;
+  };
+  /** Fecha y hora de un momento guardado (ISO completo): "sáb 8 nov, 10:32" o "hoy, 10:32". */
+  const momento = (isoCompleto) => {
+    const d = new Date(isoCompleto);
+    const hora = d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
+    const dif = difDias(aISO(d), hoy());
+    if (dif === 0) return `hoy, ${hora}`;
+    if (dif === 1) return `ayer, ${hora}`;
+    return `${fechaCorta(aISO(d))}, ${hora}`;
+  };
+  /** "hoy", "ayer", "hace 5 días" */
+  const haceDias = (isoCompleto) => {
+    const dif = difDias(aISO(new Date(isoCompleto)), hoy());
+    if (dif <= 0) return 'hoy';
+    if (dif === 1) return 'ayer';
+    return `hace ${dif} días`;
+  };
+  /** Etiqueta de vencimiento de una tarea. */
+  const etiquetaFecha = (iso) => {
+    if (!iso) return null;
+    const d = difDias(hoy(), iso);
+    if (d < 0) return { texto: d === -1 ? 'Venció ayer' : `Venció hace ${-d} días`, clase: 'rojo' };
+    if (d === 0) return { texto: 'Hoy', clase: 'azul' };
+    if (d === 1) return { texto: 'Mañana', clase: '' };
+    return { texto: fechaCorta(iso), clase: '' };
+  };
+
+  // ---------- Dinero ----------
+  // Sin centavos: "$85". Con centavos: siempre dos decimales, "$245.50".
+  const fmtEntero = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const fmtCentavos = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dinero = (n) => {
+    const v = Math.round((Number(n) || 0) * 100) / 100;
+    return (Number.isInteger(v) ? fmtEntero : fmtCentavos).format(v);
+  };
+  const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+  // ---------- Texto seguro para insertar en HTML ----------
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  // ---------- Aviso flotante (toast), con botón opcional "Deshacer" ----------
+  let timerToast = null;
+  function aviso(mensaje, opciones = {}) {
+    const t = document.getElementById('toast');
+    t.innerHTML = `<span>${esc(mensaje)}</span>${opciones.accion ? `<button type="button">${esc(opciones.accion)}</button>` : ''}`;
+    if (opciones.accion) {
+      t.querySelector('button').addEventListener('click', () => { ocultar(); opciones.alAccion && opciones.alAccion(); });
+    }
+    t.classList.add('visible');
+    clearTimeout(timerToast);
+    timerToast = setTimeout(ocultar, opciones.duracion || (opciones.accion ? 6000 : 2600));
+    function ocultar() { t.classList.remove('visible'); }
+  }
+
+  // ---------- Confirmación dentro de la app (en vez de alert/confirm) ----------
+  function confirmar({ titulo, mensaje, aceptar = 'Aceptar', cancelar = 'Cancelar', peligro = false }) {
+    return new Promise((resolver) => {
+      const raiz = document.getElementById('modal-raiz');
+      const antes = document.activeElement;
+      raiz.innerHTML = `
+        <div class="modal-velo">
+          <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-t" aria-describedby="modal-m">
+            <h2 id="modal-t">${esc(titulo)}</h2>
+            <p id="modal-m">${esc(mensaje)}</p>
+            <div class="modal-botones">
+              <button type="button" class="btn" data-r="no">${esc(cancelar)}</button>
+              <button type="button" class="btn ${peligro ? 'peligro-lleno' : 'primario'}" data-r="si">${esc(aceptar)}</button>
+            </div>
+          </div>
+        </div>`;
+      const velo = raiz.firstElementChild;
+      const botones = velo.querySelectorAll('button');
+      const cerrar = (r) => {
+        document.removeEventListener('keydown', teclas);
+        raiz.innerHTML = '';
+        if (antes && antes.focus) antes.focus();
+        resolver(r);
+      };
+      const teclas = (e) => {
+        if (e.key === 'Escape') cerrar(false);
+        if (e.key === 'Tab') { // mantener el foco dentro del cuadro
+          e.preventDefault();
+          const i = [...botones].indexOf(document.activeElement);
+          botones[(i + (e.shiftKey ? -1 : 1) + botones.length) % botones.length].focus();
+        }
+      };
+      document.addEventListener('keydown', teclas);
+      velo.addEventListener('click', (e) => {
+        const b = e.target.closest('button');
+        if (b) cerrar(b.dataset.r === 'si');
+        else if (e.target === velo) cerrar(false);
+      });
+      botones[0].focus();
+    });
+  }
+
+  // ---------- Íconos (SVG) ----------
+  const svg = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c}</svg>`;
+  const I = {
+    luna: svg('<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>'),
+    sol: svg('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5"/>'),
+    tuerca: svg('<path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><circle cx="12" cy="12" r="3.2"/>'),
+    basura: svg('<path d="M4.5 7h15M10 11v6M14 11v6M6.5 7l1 12.2a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8l1-12.2M9.5 7V4.5h5V7"/>'),
+    x: svg('<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>'),
+    palomita: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    izq: svg('<path d="M14.5 6l-6 6 6 6"/>'),
+    der: svg('<path d="M9.5 6l6 6-6 6"/>'),
+    tareas: svg('<circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.3"/>'),
+    habitos: svg('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M14.5 17l2 2 3.5-3.8"/>'),
+    dinero: svg('<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.3"/>'),
+    notas: svg('<path d="M6 3.5h9l4 4v13H6z"/><path d="M14.5 3.5v4.5h4.5M9 12.5h7M9 16h5"/>'),
+  };
+
+  return {
+    hoy, aISO, aFecha, sumarDias, difDias, inicioSemana, mesDe, sumarMeses, diasEnMes, cap,
+    nombreDia, diaCorto, nombreMes, fechaCorta, fechaLarga, rango, momento, haceDias, etiquetaFecha,
+    dinero, plural, esc, id, aviso, confirmar, I, MESES,
+  };
+})();
