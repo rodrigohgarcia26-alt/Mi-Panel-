@@ -4,7 +4,7 @@
    sube el número de VERSION (v1 → v2 → v3...) para que el celular
    descargue la versión nueva. Tus datos NO se borran al actualizar.
    ============================================================ */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `mi-panel-${VERSION}`;
 
 const ARCHIVOS = [
@@ -14,6 +14,7 @@ const ARCHIVOS = [
   'css/estilos.css',
   'js/util.js',
   'js/datos.js',
+  'js/gestos.js',
   'js/app.js',
   'js/pantallas/hoy.js',
   'js/pantallas/tareas.js',

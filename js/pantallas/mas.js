@@ -8,6 +8,19 @@ const PMas = (() => {
   let semanasAtras = 0;
   let timerGuardar = null;
 
+  // Tarjetas que se pueden mover (orden guardado en "mipanel-orden-mas"). Notas queda fija arriba.
+  const PIEZAS = {
+    revision: `<section class="tarjeta" data-tarjeta="revision" aria-labelledby="t-rev">
+        <h2 id="t-rev">Revisión de la semana</h2>
+        <div class="navegador" id="nav-rev" style="padding:0 0 10px"></div>
+        <div id="rev-datos"></div>
+      </section>`,
+    metas: `<section class="tarjeta" data-tarjeta="metas" aria-labelledby="t-metas">
+        <h2 id="t-metas">Metas</h2>
+        <ul class="lista" id="metas"></ul>
+      </section>`,
+  };
+
   const lunesActual = () => U.sumarDias(U.inicioSemana(U.hoy()), -7 * semanasAtras);
 
   function estadisticas(lunes) {
@@ -47,24 +60,9 @@ const PMas = (() => {
         </form>
         <ul class="lista notas-lista" id="notas"></ul>
       </section>
-      <section class="tarjeta" aria-labelledby="t-rev">
-        <h2 id="t-rev">Revisión de la semana</h2>
-        <div class="navegador" id="nav-rev" style="padding:0 0 10px"></div>
-        <div id="rev-datos"></div>
-      </section>
-      <section class="tarjeta" aria-labelledby="t-metas">
-        <h2 id="t-metas">Metas</h2>
-        <ul class="lista" id="metas"></ul>
-        <form class="form" id="f-meta" novalidate style="margin-top:10px">
-          <div class="campo">
-            <label for="meta-nombre">Nueva meta</label>
-            <div class="form-linea">
-              <input id="meta-nombre" type="text" maxlength="80" placeholder="Ej. Ahorrar para una laptop" autocomplete="off" enterkeyhint="done">
-              <button class="btn primario" type="submit">Agregar</button>
-            </div>
-          </div>
-        </form>
-      </section>`;
+      <div class="pila-tarjetas" id="mas-tarjetas">${Datos.orden('mas').map((k) => PIEZAS[k]).join('')}</div>`;
+    Gestos.ordenable(cont.querySelector('#mas-tarjetas'), { pantalla: 'mas' });
+    Gestos.fab(() => nuevaMeta(cont), 'Nueva meta');
     pintarRevision(cont);
     pintarMetas(cont);
     pintarNotas(cont);
@@ -146,16 +144,32 @@ const PMas = (() => {
       }
     });
 
-    cont.querySelector('#f-meta').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const inp = cont.querySelector('#meta-nombre');
-      const nombre = inp.value.trim();
-      if (!nombre) { inp.focus(); return U.aviso('Escribe el nombre de la meta.'); }
-      Datos.d.metas.push({ id: U.id(), nombre, avance: 0 });
-      Datos.guardar();
-      inp.value = '';
-      pintarMetas(cont);
-      U.aviso('Meta agregada.');
+  }
+
+  /** Cuadro "Nueva meta". */
+  function nuevaMeta(cont) {
+    U.hoja({
+      titulo: 'Nueva meta',
+      html: `<form class="form" id="f-meta" novalidate>
+          <div class="campo">
+            <label for="meta-nombre">Meta</label>
+            <input id="meta-nombre" type="text" maxlength="80" placeholder="Ej. Ahorrar para una laptop" autocomplete="off" enterkeyhint="done">
+          </div>
+          <button class="btn primario ancho" type="submit">Agregar</button>
+        </form>`,
+      alAbrir(panel, cerrar) {
+        panel.querySelector('#f-meta').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const inp = panel.querySelector('#meta-nombre');
+          const nombre = inp.value.trim();
+          if (!nombre) { inp.focus(); return U.aviso('Escribe el nombre de la meta.'); }
+          Datos.d.metas.push({ id: U.id(), nombre, avance: 0 });
+          Datos.guardar();
+          cerrar();
+          pintarMetas(cont);
+          U.aviso('Meta agregada.');
+        });
+      },
     });
   }
 
@@ -214,7 +228,7 @@ const PMas = (() => {
           <button type="button" class="btn-icono peligro" data-eliminar-meta="${m.id}" aria-label="Eliminar meta: ${U.esc(m.nombre)}">${U.I.basura}</button>
         </div>
         <input type="range" min="0" max="100" step="5" value="${m.avance}" data-meta="${m.id}" style="--v:${m.avance}%" aria-labelledby="meta-t-${m.id}" aria-valuetext="${m.avance}%">
-      </li>`).join('') : '<li class="vacio">Agrega una meta y mueve la barra conforme avances.</li>';
+      </li>`).join('') : '<li class="vacio">Toca + para agregar una meta y mueve la barra conforme avances.</li>';
   }
 
   return { titulo: 'Más', render };

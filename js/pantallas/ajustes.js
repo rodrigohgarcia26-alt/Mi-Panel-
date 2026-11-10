@@ -29,6 +29,14 @@ const PAjustes = (() => {
         ${Datos.tema() ? '<button type="button" class="btn-texto" data-accion="tema-sistema">Usar el tema del celular</button>' : ''}
       </section>
 
+      <section class="tarjeta" aria-labelledby="t-orden">
+        <h2 id="t-orden">Tarjetas</h2>
+        <p class="texto2 chico">En cada pantalla puedes mantener presionada una tarjeta para moverla.</p>
+        <div class="pila">
+          <button type="button" class="btn" data-accion="restablecer-orden">Restablecer orden de las tarjetas</button>
+        </div>
+      </section>
+
       <section class="tarjeta" aria-labelledby="t-resp">
         <h2 id="t-resp">Respaldo</h2>
         <p class="fuerte" id="ultimo-resp">${textoRespaldo()}</p>
@@ -68,6 +76,10 @@ const PAjustes = (() => {
           await Datos.exportar();
           cont.querySelector('#ultimo-resp').textContent = textoRespaldo();
           U.aviso('Respaldo exportado.');
+          break;
+        case 'restablecer-orden':
+          Datos.restablecerOrdenes();
+          U.aviso('Listo: las tarjetas volvieron a su orden original.');
           break;
         case 'importar':
           cont.querySelector('#archivo-respaldo').click();

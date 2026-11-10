@@ -33,25 +33,11 @@ const PHabitos = (() => {
 
   // ---------- Pintar ----------
   function render(cont) {
-    cont.innerHTML = `
-      <section class="tarjeta resumen-habitos" id="resumen-hab"></section>
-      <section class="tarjeta" id="tabla-habitos" aria-label="Tu semana"></section>
-      <details class="tarjeta desplegable agregar" id="d-habito">
-        <summary><span class="grupo-titulo">${U.I.mas} Agregar hábito</span><span class="flecha" aria-hidden="true">›</span></summary>
-        <div class="contenido">
-          <form class="form" id="f-habito" novalidate>
-            <div class="campo">
-              <label for="h-nombre">Nombre</label>
-              <div class="form-linea">
-                <input id="h-nombre" type="text" maxlength="60" placeholder="Ej. Meditar 5 minutos" autocomplete="off" enterkeyhint="done">
-                <button class="btn primario" type="submit">Agregar</button>
-              </div>
-            </div>
-          </form>
-          <form class="form quitar-habito" id="f-quitar" novalidate></form>
-        </div>
-      </details>
-      <details class="tarjeta desplegable" id="d-grafica" open>
+    // Tarjetas que se pueden mover (orden guardado en "mipanel-orden-habitos").
+    const piezas = {
+      resumen: '<section class="tarjeta resumen-habitos" id="resumen-hab" data-tarjeta="resumen"></section>',
+      semana: '<section class="tarjeta" id="tabla-habitos" data-tarjeta="semana" aria-label="Tu semana"></section>',
+      grafica: `<details class="tarjeta desplegable" id="d-grafica" data-tarjeta="grafica" open>
         <summary><span class="grupo-titulo">Hábitos cumplidos</span><span class="flecha" aria-hidden="true">›</span></summary>
         <div class="contenido">
           <div class="segmentos grafica-modo" role="group" aria-label="Periodo de la gráfica">
@@ -61,36 +47,19 @@ const PHabitos = (() => {
           <div id="grafica"></div>
           <p class="grafica-info texto2 chico" id="grafica-info" aria-live="polite">Toca la gráfica para ver un día.</p>
         </div>
-      </details>`;
+      </details>`,
+    };
+    cont.innerHTML = `<div class="pila-tarjetas" id="hab-tarjetas">${Datos.orden('habitos').map((k) => piezas[k]).join('')}</div>`;
     pintar(cont);
-
-    cont.querySelector('#f-habito').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const inp = cont.querySelector('#h-nombre');
-      const nombre = inp.value.trim();
-      if (!nombre) { inp.focus(); return U.aviso('Escribe el nombre del hábito.'); }
-      Datos.d.habitos.push({ id: U.id(), nombre, dias: {}, creado: new Date().toISOString() });
-      Datos.guardar();
-      inp.value = '';
-      pintar(cont);
-      U.aviso('Hábito agregado.');
-    });
-
-    cont.querySelector('#f-quitar').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const id = cont.querySelector('#h-quitar').value;
-      const h = Datos.d.habitos.find((x) => x.id === id);
-      if (!h) return;
-      const antes = Datos.foto();
-      Datos.d.habitos = Datos.d.habitos.filter((x) => x.id !== id);
-      Datos.guardar();
-      pintar(cont);
-      App.conDeshacer(`Se quitó “${h.nombre}”.`, antes);
-    });
+    Gestos.ordenable(cont.querySelector('#hab-tarjetas'), { pantalla: 'habitos' });
+    Gestos.fab(() => nuevoHabito(cont), 'Nuevo hábito');
 
     cont.addEventListener('click', (e) => {
       const m = e.target.closest('[data-modo]');
       if (m) { modo = m.dataset.modo; return pintarGrafica(cont); }
+
+      const q = e.target.closest('[data-opciones-habito]');
+      if (q) return opcionesHabito(cont, q.dataset.opcionesHabito);
 
       const c = e.target.closest('[data-h][data-d]');
       if (c) {
@@ -109,12 +78,68 @@ const PHabitos = (() => {
     });
   }
 
+  /** Cuadro "Nuevo hábito". */
+  function nuevoHabito(cont) {
+    U.hoja({
+      titulo: 'Nuevo hábito',
+      html: `<form class="form" id="f-habito" novalidate>
+          <div class="campo">
+            <label for="h-nombre">Nombre</label>
+            <input id="h-nombre" type="text" maxlength="60" placeholder="Ej. Meditar 5 minutos" autocomplete="off" enterkeyhint="done">
+          </div>
+          <button class="btn primario ancho" type="submit">Guardar</button>
+          <p class="texto2 chico">Para quitar un hábito, toca su nombre en la lista.</p>
+        </form>`,
+      alAbrir(panel, cerrar) {
+        panel.querySelector('#f-habito').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const inp = panel.querySelector('#h-nombre');
+          const nombre = inp.value.trim();
+          if (!nombre) { inp.focus(); return U.aviso('Escribe el nombre del hábito.'); }
+          Datos.d.habitos.push({ id: U.id(), nombre, dias: {}, creado: new Date().toISOString() });
+          Datos.guardar();
+          cerrar();
+          pintar(cont);
+          U.aviso('Hábito agregado.');
+        });
+      },
+    });
+  }
+
+  /** Al tocar el nombre de un hábito: opción para quitarlo (con confirmación). */
+  function opcionesHabito(cont, id) {
+    const h = Datos.d.habitos.find((x) => x.id === id);
+    if (!h) return;
+    U.hoja({
+      titulo: 'Hábito',
+      html: `<p class="hoja-texto">${U.esc(h.nombre)}</p>
+        <p class="texto2 chico hoja-detalle">${textoRacha(h)}</p>
+        <div class="pila"><button type="button" class="btn peligro" data-op="quitar">Quitar hábito</button></div>`,
+      alAbrir(panel, cerrar) {
+        panel.querySelector('[data-op="quitar"]').addEventListener('click', async () => {
+          cerrar();
+          const ok = await U.confirmar({
+            titulo: '¿Quitar este hábito?',
+            mensaje: `Se quitará “${h.nombre}” con todas sus marcas.`,
+            aceptar: 'Quitar',
+            peligro: true,
+          });
+          if (!ok) return;
+          const antes = Datos.foto();
+          Datos.d.habitos = Datos.d.habitos.filter((x) => x.id !== id);
+          Datos.guardar();
+          pintar(cont);
+          App.conDeshacer(`Se quitó “${h.nombre}”.`, antes);
+        });
+      },
+    });
+  }
+
   const textoRacha = (h) => { const n = racha(h); return `Racha: <b>${n}</b> ${n === 1 ? 'día' : 'días'}`; };
 
   function pintar(cont) {
     pintarResumen(cont);
     pintarSemana(cont);
-    pintarQuitar(cont);
     pintarGrafica(cont);
   }
 
@@ -122,7 +147,7 @@ const PHabitos = (() => {
     const hab = Datos.d.habitos;
     const hoy = U.hoy();
     const el = cont.querySelector('#resumen-hab');
-    if (!hab.length) { el.innerHTML = '<p class="vacio">Aún no tienes hábitos. Agrega uno abajo.</p>'; return; }
+    if (!hab.length) { el.innerHTML = '<p class="vacio">Aún no tienes hábitos. Toca + para agregar uno.</p>'; return; }
     const hechos = cumplidos(hoy);
     const faltan = hab.filter((h) => !h.dias[hoy]).map((h) => U.minus(h.nombre));
     el.innerHTML = `
@@ -149,7 +174,7 @@ const PHabitos = (() => {
       <ul class="lista">${hab.map((h) => `
         <li class="habito">
           <div class="habito-cab">
-            <p class="habito-nombre">${U.esc(h.nombre)}</p>
+            <button type="button" class="habito-nombre" data-opciones-habito="${h.id}" aria-label="${U.esc(h.nombre)}: opciones">${U.esc(h.nombre)}</button>
             <p class="habito-racha" data-racha="${h.id}">${textoRacha(h)}</p>
           </div>
           <div class="rejilla7" role="group" aria-label="Días de ${U.esc(h.nombre)}">${dias.map((d) => `
@@ -159,18 +184,6 @@ const PHabitos = (() => {
           </div>
         </li>`).join('')}
       </ul>`;
-  }
-
-  function pintarQuitar(cont) {
-    const hab = Datos.d.habitos;
-    cont.querySelector('#f-quitar').innerHTML = hab.length ? `
-      <div class="campo">
-        <label for="h-quitar">Quitar un hábito</label>
-        <div class="form-linea">
-          <select id="h-quitar">${hab.map((h) => `<option value="${h.id}">${U.esc(h.nombre)}</option>`).join('')}</select>
-          <button class="btn peligro" type="submit">Quitar</button>
-        </div>
-      </div>` : '';
   }
 
   // ---------- Gráfica de líneas ----------

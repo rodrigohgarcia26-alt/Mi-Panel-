@@ -12,6 +12,7 @@ sw.js                  Service worker: guarda la app para usarla sin internet
 css/estilos.css        Diseño (modo claro y oscuro)
 js/util.js             Fechas, pesos, avisos, íconos
 js/datos.js            Guardado en localStorage, ejemplos, respaldo
+js/gestos.js           Botón flotante "+", mover tarjetas y deslizar entre apartados
 js/app.js              Navegación, cabecera, tema, actualizaciones
 js/pantallas/*.js      Una por pantalla: hoy, tareas, habitos, dinero, mas, ajustes
 fuentes/               Bricolage Grotesque y Figtree (locales, licencia OFL)
@@ -56,7 +57,7 @@ Después ábrela desde su ícono. Ya funciona sin internet.
 Tus datos viven en el celular, no en GitHub, así que subir archivos nuevos no los borra.
 
 1. Cambia lo que quieras en los archivos.
-2. Abre `sw.js` y sube el número de versión: `const VERSION = 'v2';` → `'v3'` (la siguiente vez `'v4'`, etc.).
+2. Abre `sw.js` y sube el número de versión: `const VERSION = 'v3';` → `'v4'` (la siguiente vez `'v5'`, etc.).
    **Si no cambias este número, el celular seguirá mostrando la versión vieja.**
 3. En GitHub: **Add file → Upload files**, arrastra los archivos cambiados (incluyendo `sw.js`) → **Commit changes**.
 4. Abre la app con internet. La versión nueva se instala sola y la app se recarga una vez.
@@ -68,10 +69,17 @@ Por seguridad, antes de una actualización grande: **Ajustes → Exportar**.
 
 Todo se guarda en `localStorage`:
 
-- `mi-panel-datos`: tareas, hábitos, dinero, notas, etc., como un JSON con campo `version` (ahora **2**).
+- `mi-panel-datos`: tareas, hábitos, dinero, notas, etc., como un JSON con campo `version` (ahora **3**).
 - `mipanel-tema`: `claro` u `oscuro` (si no existe, se sigue el tema del celular).
 - `mipanel-orden`: orden de las tarjetas de Hoy.
+- `mipanel-orden-tareas`, `mipanel-orden-habitos`, `mipanel-orden-dinero`, `mipanel-orden-mas`: orden de las tarjetas de cada pantalla
+  (Ajustes → "Restablecer orden de las tarjetas" las borra).
+- `mipanel-fab`: posición del botón "+" (distancia a la orilla derecha y arriba de la barra inferior), igual en todas las pantallas.
 
 Al pasar de la versión 1 a la 2, la app deja una copia intacta de tus datos anteriores en
 `mi-panel-datos-v1-respaldo`, mueve el tema y el orden a sus claves nuevas y agrega la tarjeta "Mañana".
+Al pasar de la versión 2 a la 3, deja una copia en `mi-panel-datos-v2-respaldo` y cambia la prioridad
+"Normal" (y "Baja") a "Media". Las tareas siguen guardando su fecha de vencimiento (hoy + N días al crearlas);
+la app muestra los días que faltan.
+
 Si en el futuro cambia la estructura, `normalizar()` en `js/datos.js` es el lugar para convertir los datos viejos.

@@ -151,6 +151,64 @@ const U = (() => {
     });
   }
 
+  // ---------- Cuadro que sale de abajo ("Nueva tarea", opciones, etc.) ----------
+  // Se cierra con la X, tocando fuera o con Escape. Mientras está abierto, el botón "+" se oculta.
+  let cerrarHojaActual = null;
+  function hoja({ titulo, html, alAbrir }) {
+    cerrarHoja();
+    const raiz = document.getElementById('hoja-raiz');
+    const antes = document.activeElement;
+    raiz.innerHTML = `
+      <div class="hoja-velo">
+        <div class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-t">
+          <div class="hoja-cab">
+            <h2 id="hoja-t">${esc(titulo)}</h2>
+            <button type="button" class="btn-icono" data-cerrar aria-label="Cerrar">${I.x}</button>
+          </div>
+          <div class="hoja-cuerpo">${html}</div>
+        </div>
+      </div>`;
+    const velo = raiz.firstElementChild;
+    const panel = velo.firstElementChild;
+    document.body.classList.add('hoja-abierta');
+
+    // En iPhone el teclado tapa la parte de abajo: se sube el cuadro lo que mida el teclado.
+    const vv = window.visualViewport;
+    const ajustar = () => {
+      if (!vv) return;
+      panel.style.marginBottom = `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`;
+      panel.style.maxHeight = `${Math.round(vv.height * 0.92)}px`;
+    };
+    if (vv) { vv.addEventListener('resize', ajustar); vv.addEventListener('scroll', ajustar); }
+
+    const teclas = (e) => { if (e.key === 'Escape') cerrar(); };
+    document.addEventListener('keydown', teclas);
+    // Solo se cierra si el toque empezó y terminó fuera del cuadro.
+    let tocoFuera = false;
+    velo.addEventListener('pointerdown', (e) => { tocoFuera = e.target === velo; });
+    velo.addEventListener('click', (e) => {
+      if (e.target.closest('[data-cerrar]') || (e.target === velo && tocoFuera)) cerrar();
+    });
+
+    function cerrar() {
+      if (cerrarHojaActual !== cerrar) return;
+      cerrarHojaActual = null;
+      document.removeEventListener('keydown', teclas);
+      if (vv) { vv.removeEventListener('resize', ajustar); vv.removeEventListener('scroll', ajustar); }
+      raiz.innerHTML = '';
+      document.body.classList.remove('hoja-abierta');
+      if (antes && antes.isConnected && antes.focus) antes.focus({ preventScroll: true });
+    }
+    cerrarHojaActual = cerrar;
+
+    if (alAbrir) alAbrir(panel, cerrar);
+    const primero = panel.querySelector('.hoja-cuerpo input[type="text"], .hoja-cuerpo input[type="number"], .hoja-cuerpo textarea')
+      || panel.querySelector('.hoja-cuerpo button') || panel.querySelector('[data-cerrar]');
+    if (primero) primero.focus();
+    return cerrar;
+  }
+  function cerrarHoja() { if (cerrarHojaActual) cerrarHojaActual(); }
+
   // ---------- Íconos (SVG) ----------
   const svg = (c) => `<svg viewBox="0 0 24 24" aria-hidden="true">${c}</svg>`;
   const I = {
@@ -173,6 +231,6 @@ const U = (() => {
   return {
     hoy, aISO, aFecha, sumarDias, difDias, inicioSemana, mesDe, sumarMeses, diasEnMes, cap,
     nombreDia, diaCorto, nombreMes, fechaCorta, fechaLarga, rango, momento, haceDias, etiquetaFecha,
-    dinero, plural, unirY, minus, hora, anillo, esc, id, aviso, confirmar, I, MESES,
+    dinero, plural, unirY, minus, hora, anillo, esc, id, aviso, confirmar, hoja, cerrarHoja, I, MESES,
   };
 })();

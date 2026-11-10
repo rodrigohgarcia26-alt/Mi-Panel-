@@ -6,16 +6,24 @@
 const Datos = (() => {
   const CLAVE = 'mi-panel-datos';
   const CLAVE_TEMA = 'mipanel-tema';    // 'claro' | 'oscuro' (si no existe, se sigue el tema del celular)
-  const CLAVE_ORDEN = 'mipanel-orden';  // orden de las tarjetas de Hoy, como JSON
-  const VERSION = 2;
-  const TARJETAS_HOY = ['tareas', 'habitos', 'dinero', 'manana', 'notas'];
+  const CLAVE_ORDEN = 'mipanel-orden';  // orden de las tarjetas de Hoy; las demás pantallas usan "mipanel-orden-<pantalla>"
+  const VERSION = 3;
+  // Tarjetas que se pueden mover en cada pantalla, en su orden original.
+  const TARJETAS = {
+    hoy: ['tareas', 'habitos', 'dinero', 'manana', 'notas'],
+    tareas: ['atrasadas', 'hoy', 'semana'],
+    habitos: ['resumen', 'semana', 'grafica'],
+    dinero: ['resumen', 'presupuesto', 'categorias', 'movimientos'],
+    mas: ['revision', 'metas'],
+  };
+  const claveOrden = (p) => p === 'hoy' ? CLAVE_ORDEN : `${CLAVE_ORDEN}-${p}`;
   const HABITOS_INICIALES = ['Tomar agua', 'Estudiar o leer 1 hora', 'Hacer ejercicio', 'Dormir', 'Comer a mis horas'];
 
   /** Estructura vacía. */
   function vacio() {
     return {
       version: VERSION,
-      tareas: [],                 // {id, texto, fecha, hora, area, prioridad, hecha, hechaEn, creada, ejemplo}
+      tareas: [],                 // {id, texto, fecha (vencimiento), hora (ya no se usa), area, prioridad 'Alta'|'Media', hecha, hechaEn, creada, ejemplo}
       habitos: [],                // {id, nombre, dias: {"AAAA-MM-DD": true}, creado}
       marcasEjemplo: [],          // [[idHabito, "AAAA-MM-DD"], ...] marcas puestas por los ejemplos
       movimientos: [],            // {id, tipo: 'gasto'|'ingreso', monto, categoria, fecha, nota, ejemplo}
@@ -40,9 +48,9 @@ const Datos = (() => {
 
     d.tareas = [
       { id: U.id(), texto: 'Entregar reporte de laboratorio', fecha: ayer, hora: null, area: 'Escuela', prioridad: 'Alta', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
-      { id: U.id(), texto: 'Repasar los apuntes de la semana', fecha: hoy, hora: null, area: 'Escuela', prioridad: 'Normal', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
-      { id: U.id(), texto: 'Llamar a mi familia', fecha: hoy, hora: null, area: 'Personal', prioridad: 'Normal', hecha: true, hechaEn: ahora, creada: ahora, ejemplo: true },
-      { id: U.id(), texto: 'Examen de matemáticas', fecha: U.sumarDias(hoy, 1), hora: '09:00', area: 'Escuela', prioridad: 'Alta', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Repasar los apuntes de la semana', fecha: hoy, hora: null, area: 'Escuela', prioridad: 'Media', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Llamar a mi familia', fecha: hoy, hora: null, area: 'Personal', prioridad: 'Media', hecha: true, hechaEn: ahora, creada: ahora, ejemplo: true },
+      { id: U.id(), texto: 'Examen de matemáticas', fecha: U.sumarDias(hoy, 1), hora: null, area: 'Escuela', prioridad: 'Alta', hecha: false, hechaEn: null, creada: ahora, ejemplo: true },
     ];
     d.habitos = HABITOS_INICIALES.map((nombre) => ({ id: U.id(), nombre, dias: {}, creado: ahora }));
     // Algunas marcas de ejemplo: 3 de 5 hoy y un poco de historia en la semana.
@@ -76,13 +84,14 @@ const Datos = (() => {
   const leerClave = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const ponerClave = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* bloqueado */ } };
 
-  /** Deja el orden con las 5 tarjetas exactamente una vez. "Mañana" entra antes de "Notas". */
-  function limpiarOrden(lista) {
-    const orden = Array.isArray(lista) ? lista.filter((t, i, a) => TARJETAS_HOY.includes(t) && a.indexOf(t) === i) : [];
-    TARJETAS_HOY.forEach((t) => {
+  /** Deja el orden con cada tarjeta de la pantalla exactamente una vez. En Hoy, "Mañana" entra antes de "Notas". */
+  function limpiarOrden(lista, pantalla = 'hoy') {
+    const base = TARJETAS[pantalla] || [];
+    const orden = Array.isArray(lista) ? lista.filter((t, i, a) => base.includes(t) && a.indexOf(t) === i) : [];
+    base.forEach((t) => {
       if (orden.includes(t)) return;
       const iNotas = orden.indexOf('notas');
-      if (t === 'manana' && iNotas >= 0) orden.splice(iNotas, 0, t); else orden.push(t);
+      if (pantalla === 'hoy' && t === 'manana' && iNotas >= 0) orden.splice(iNotas, 0, t); else orden.push(t);
     });
     return orden;
   }
@@ -105,21 +114,27 @@ const Datos = (() => {
     for (const k of ['tareas', 'habitos', 'marcasEjemplo', 'movimientos', 'notas', 'metas']) if (!Array.isArray(d[k])) d[k] = [];
     for (const k of ['animo', 'revisiones']) if (!d[k] || typeof d[k] !== 'object') d[k] = {};
     d.habitos.forEach((h) => { if (!h.dias || typeof h.dias !== 'object') h.dias = {}; });
-    d.tareas.forEach((t) => { if (!/^\d{2}:\d{2}$/.test(t.hora || '')) t.hora = null; });
+    d.tareas.forEach((t) => {
+      if (!/^\d{2}:\d{2}$/.test(t.hora || '')) t.hora = null;
+      // ----- Migración v2 → v3: la prioridad ahora es Media o Alta ("Normal" y "Baja" pasan a "Media") -----
+      if (t.prioridad !== 'Alta') t.prioridad = 'Media';
+    });
     if (!(Number(d.presupuesto) >= 0)) d.presupuesto = 3000;
     d.version = VERSION;
     return d;
   }
 
-  // ---------- Tema y orden de Hoy (claves aparte) ----------
+  // ---------- Tema y orden de las tarjetas (claves aparte) ----------
   function tema() { const t = leerClave(CLAVE_TEMA); return ['claro', 'oscuro'].includes(t) ? t : null; }
   function ponerTema(t) { ponerClave(CLAVE_TEMA, ['claro', 'oscuro'].includes(t) ? t : null); }
-  function orden() {
+  function orden(pantalla = 'hoy') {
     let o = null;
-    try { o = JSON.parse(leerClave(CLAVE_ORDEN)); } catch (e) { /* dañado: se usa el de siempre */ }
-    return limpiarOrden(o);
+    try { o = JSON.parse(leerClave(claveOrden(pantalla))); } catch (e) { /* dañado: se usa el de siempre */ }
+    return limpiarOrden(o, pantalla);
   }
-  function ponerOrden(o) { ponerClave(CLAVE_ORDEN, JSON.stringify(limpiarOrden(o))); }
+  function ponerOrden(o, pantalla = 'hoy') { ponerClave(claveOrden(pantalla), JSON.stringify(limpiarOrden(o, pantalla))); }
+  /** Regresa todas las pantallas a su orden original de tarjetas. */
+  function restablecerOrdenes() { Object.keys(TARJETAS).forEach((p) => ponerClave(claveOrden(p), null)); }
 
   let d;
   function cargar() {
@@ -170,7 +185,7 @@ const Datos = (() => {
   const hayEjemplos = () => d.tareas.some((t) => t.ejemplo) || d.movimientos.some((m) => m.ejemplo) || d.notas.some((n) => n.ejemplo) || d.marcasEjemplo.length > 0;
 
   function borrarTodo() {
-    d = vacio();      // el tema y el orden de Hoy se conservan (están en otras claves)
+    d = vacio();      // el tema y el orden de las tarjetas se conservan (están en otras claves)
     guardar();
   }
 
@@ -228,6 +243,6 @@ const Datos = (() => {
     get d() { return d; },
     cargar, guardar, foto, restaurar, borrarEjemplos, hayEjemplos, borrarTodo, olvidarMarcaEjemplo,
     exportar, leerRespaldo, importar, pedirPersistencia, VERSION,
-    tema, ponerTema, orden, ponerOrden,
+    tema, ponerTema, orden, ponerOrden, restablecerOrdenes,
   };
 })();

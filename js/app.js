@@ -9,8 +9,12 @@ const App = (() => {
   const main = document.getElementById('pantalla');
   const nav = document.getElementById('nav');
   const medioOscuro = window.matchMedia('(prefers-color-scheme: dark)');
+  // Orden para deslizar entre apartados (Ajustes no entra).
+  const ORDEN_DESLIZAR = ['hoy', 'tareas', 'habitos', 'dinero', 'mas'];
   let actual = null;
   let fechaPintada = U.hoy();
+  let entrada = null;     // animación de entrada después de deslizar
+  let deslizando = false;
 
   // ---------- Tema claro / oscuro ----------
   const temaEfectivo = () => Datos.tema() || (medioOscuro.matches ? 'oscuro' : 'claro');
@@ -67,10 +71,18 @@ const App = (() => {
     actual = nombre;
     fechaPintada = U.hoy();
     document.title = nombre === 'hoy' ? 'Mi Panel' : `${PANTALLAS[nombre].titulo} · Mi Panel`;
+    U.cerrarHoja();
     pintarCabecera(nombre);
+    Gestos.fab(null); // cada pantalla que lo usa vuelve a mostrar el botón "+"
     const cont = document.createElement('div');
     main.replaceChildren(cont);
     PANTALLAS[nombre].render(cont);
+    if (entrada) {
+      const clase = entrada;
+      entrada = null;
+      main.classList.add(clase);
+      setTimeout(() => main.classList.remove(clase), 200);
+    }
     nav.querySelectorAll('a').forEach((a) => {
       if (a.dataset.seccion === nombre) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -88,10 +100,31 @@ const App = (() => {
     U.aviso(mensaje, { accion: 'Deshacer', alAccion: () => { Datos.restaurar(fotoAntes); refrescar(); U.aviso('Listo, se deshizo.'); } });
   }
 
-  // Si la app se queda abierta y cambia el día, se actualiza al volver a ella.
+  // ---------- Deslizar el dedo: izquierda = siguiente apartado, derecha = anterior ----------
+  Gestos.deslizar((dir) => {
+    const i = ORDEN_DESLIZAR.indexOf(actual);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ORDEN_DESLIZAR.length || deslizando) return; // en los extremos no pasa nada
+    deslizando = true;
+    main.classList.add(dir > 0 ? 'sale-izq' : 'sale-der');
+    setTimeout(() => {
+      main.classList.remove('sale-izq', 'sale-der');
+      entrada = dir > 0 ? 'entra-der' : 'entra-izq';
+      deslizando = false;
+      location.hash = ORDEN_DESLIZAR[j];
+    }, 150);
+  });
+
+  // Si cambia el día, se actualiza sola (los "días que faltan" de las tareas, etc.):
+  // al volver a la app, o cada minuto si sigue abierta (sin interrumpir si estás escribiendo).
+  const escribiendo = () => document.body.classList.contains('hoja-abierta')
+    || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && fechaPintada !== U.hoy()) refrescar();
   });
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && fechaPintada !== U.hoy() && !escribiendo() && !Gestos.ocupado) refrescar();
+  }, 60000);
 
   // ---------- Modo sin internet (service worker) ----------
   // La versión nueva se instala sola (skipWaiting + clients.claim en sw.js).
