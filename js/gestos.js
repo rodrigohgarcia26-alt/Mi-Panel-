@@ -235,9 +235,19 @@ const Gestos = (() => {
   }
 
   // ============================================================
-  // Deslizar entre apartados: rápido (< 350 ms), horizontal (> 70 px y más que en vertical).
+  // Deslizar entre apartados. Se decide al soltar el dedo:
+  //  · más de 40 px en horizontal y horizontal > vertical × 1.2
+  //  · todo el gesto dura menos de 1000 ms
+  //  · el dedo empezó a moverse (más de 8 px) antes de 420 ms; si no, es una
+  //    pulsación larga para mover una tarjeta y no cambia de pantalla.
+  // Funciona en toda la pantalla (también sobre las tarjetas y sus listas).
   // ============================================================
-  const NO_DESLIZAR = 'input, textarea, select, [contenteditable], ul, ol, .grafica-desliza, .grafica-svg, .fab, .hoja-velo, .modal-velo';
+  const NO_DESLIZAR = 'input, textarea, select, [contenteditable], .fab, .grafica-desliza, .hoja-velo, .modal-velo';
+  const DESLIZAR_MIN_PX = 40;
+  const DESLIZAR_PROPORCION = 1.2;
+  const DESLIZAR_MAX_MS = 1000;
+  const DESLIZAR_INICIO_PX = 8;
+  const DESLIZAR_INICIO_MS = 420;
 
   function deslizar(alDeslizar) {
     let t = null;
@@ -246,18 +256,33 @@ const Gestos = (() => {
       if (e.touches.length !== 1 || ocupado || document.body.classList.contains('hoja-abierta')) return;
       if (e.target.closest && e.target.closest(NO_DESLIZAR)) return;
       const p = e.touches[0];
-      t = { x: p.clientX, y: p.clientY, t: Date.now() };
+      t = { x: p.clientX, y: p.clientY, t: Date.now(), movio: false };
     }, { passive: true });
-    document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) t = null; }, { passive: true });
+    document.addEventListener('touchmove', (e) => {
+      if (!t) return;
+      if (e.touches.length > 1 || ocupado) { t = null; return; } // dos dedos o una tarjeta levantada
+      if (t.movio) return;
+      const p = e.touches[0];
+      if (Math.hypot(p.clientX - t.x, p.clientY - t.y) > DESLIZAR_INICIO_PX) {
+        // Si tardó en empezar a moverse, era una pulsación larga: no cuenta como deslizar.
+        if (Date.now() - t.t >= DESLIZAR_INICIO_MS) { t = null; return; }
+        t.movio = true;
+      }
+    }, { passive: true });
     document.addEventListener('touchcancel', () => { t = null; }, { passive: true });
     document.addEventListener('touchend', (e) => {
       if (!t) return;
       const p = e.changedTouches[0];
       const dx = p.clientX - t.x, dy = p.clientY - t.y, dt = Date.now() - t.t;
+      const movio = t.movio;
       t = null;
-      if (ocupado || dt >= 350) return;
-      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) alDeslizar(dx < 0 ? 1 : -1);
+      if (ocupado || !movio || dt >= DESLIZAR_MAX_MS) return;
+      if (Math.abs(dx) > DESLIZAR_MIN_PX && Math.abs(dx) > Math.abs(dy) * DESLIZAR_PROPORCION) alDeslizar(dx < 0 ? 1 : -1);
     }, { passive: true });
+    // Que el navegador no "arrastre" los enlaces (eso cancelaba el gesto con pointercancel).
+    document.addEventListener('dragstart', (e) => {
+      if (e.target && e.target.closest && e.target.closest('a')) e.preventDefault();
+    });
   }
 
   return { ordenable, fab, deslizar, get ocupado() { return ocupado; } };

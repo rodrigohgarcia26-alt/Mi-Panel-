@@ -69,6 +69,8 @@ const App = (() => {
     if (!PANTALLAS[nombre]) nombre = 'hoy';
     const cambio = actual !== null && actual !== nombre;
     actual = nombre;
+    // Entrar a Tareas, Hábitos o Dinero (pestaña, tarjeta de Hoy o deslizando) suma 1 al uso de hoy.
+    if (cambio) Datos.contarUso(nombre);
     fechaPintada = U.hoy();
     document.title = nombre === 'hoy' ? 'Mi Panel' : `${PANTALLAS[nombre].titulo} · Mi Panel`;
     U.cerrarHoja();

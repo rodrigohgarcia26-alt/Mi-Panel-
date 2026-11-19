@@ -7,6 +7,10 @@ const Datos = (() => {
   const CLAVE = 'mi-panel-datos';
   const CLAVE_TEMA = 'mipanel-tema';    // 'claro' | 'oscuro' (si no existe, se sigue el tema del celular)
   const CLAVE_ORDEN = 'mipanel-orden';  // orden de las tarjetas de Hoy; las demás pantallas usan "mipanel-orden-<pantalla>"
+  const CLAVE_USO = 'mipanel-uso';           // entradas por día: {"AAAA-MM-DD": {tareas, habitos, dinero}}
+  const CLAVE_USO_AUTO = 'mipanel-uso-auto'; // "no" = no contar ni adaptar Hoy (si no existe, está activado)
+  const SECCIONES_USO = ['tareas', 'habitos', 'dinero']; // también es el orden para desempatar
+  const DIAS_USO = 30;
   const VERSION = 3;
   // Tarjetas que se pueden mover en cada pantalla, en su orden original.
   const TARJETAS = {
@@ -136,6 +140,48 @@ const Datos = (() => {
   /** Regresa todas las pantallas a su orden original de tarjetas. */
   function restablecerOrdenes() { Object.keys(TARJETAS).forEach((p) => ponerClave(claveOrden(p), null)); }
 
+  // ---------- Uso de la app (solo en este celular) ----------
+  // Cada entrada a Tareas, Hábitos o Dinero suma 1 a ese día. Se guardan solo los últimos 30 días.
+  const usoActivo = () => leerClave(CLAVE_USO_AUTO) !== 'no';
+  function ponerUsoActivo(si) { ponerClave(CLAVE_USO_AUTO, si ? null : 'no'); }
+  const limiteUso = () => U.sumarDias(U.hoy(), -(DIAS_USO - 1));
+  function leerUso() {
+    let o = null;
+    try { o = JSON.parse(leerClave(CLAVE_USO)); } catch (e) { /* dañado: se empieza de cero */ }
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+  }
+  function contarUso(seccion) {
+    if (!SECCIONES_USO.includes(seccion) || !usoActivo()) return;
+    const uso = leerUso();
+    const hoy = U.hoy();
+    const dia = uso[hoy] && typeof uso[hoy] === 'object' ? uso[hoy] : {};
+    const nuevo = {};
+    SECCIONES_USO.forEach((k) => { nuevo[k] = Number(dia[k]) || 0; });
+    nuevo[seccion]++;
+    uso[hoy] = nuevo;
+    // Se borran los días con más de 30 días (y cualquier clave que no sea una fecha).
+    const limite = limiteUso();
+    Object.keys(uso).forEach((f) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || f < limite) delete uso[f]; });
+    ponerClave(CLAVE_USO, JSON.stringify(uso));
+  }
+  /** Entradas de los últimos 30 días: {tareas, habitos, dinero}. */
+  function totalesUso() {
+    const uso = leerUso();
+    const limite = limiteUso();
+    const t = { tareas: 0, habitos: 0, dinero: 0 };
+    Object.entries(uso).forEach(([f, dia]) => {
+      if (f < limite || !dia || typeof dia !== 'object') return;
+      SECCIONES_USO.forEach((k) => { t[k] += Math.max(0, Number(dia[k]) || 0); });
+    });
+    return t;
+  }
+  /** La sección que va grande en Hoy. Empate o sin datos: Tareas, Hábitos, Dinero. */
+  function seccionGrande() {
+    if (!usoActivo()) return 'tareas';
+    const t = totalesUso();
+    return SECCIONES_USO.reduce((mejor, k) => (t[k] > t[mejor] ? k : mejor), SECCIONES_USO[0]);
+  }
+
   let d;
   function cargar() {
     let crudo = null;
@@ -244,5 +290,6 @@ const Datos = (() => {
     cargar, guardar, foto, restaurar, borrarEjemplos, hayEjemplos, borrarTodo, olvidarMarcaEjemplo,
     exportar, leerRespaldo, importar, pedirPersistencia, VERSION,
     tema, ponerTema, orden, ponerOrden, restablecerOrdenes,
+    usoActivo, ponerUsoActivo, contarUso, totalesUso, seccionGrande,
   };
 })();
