@@ -60,7 +60,16 @@ const PMas = (() => {
         </form>
         <ul class="lista notas-lista" id="notas"></ul>
       </section>
-      <div class="pila-tarjetas" id="mas-tarjetas">${Datos.orden('mas').map((k) => PIEZAS[k]).join('')}</div>`;
+      <div class="pila-tarjetas" id="mas-tarjetas">${Datos.orden('mas').map((k) => PIEZAS[k]).join('')}</div>
+      <section class="tarjeta" aria-labelledby="t-uso">
+        <div class="interruptor-zona">
+          <div>
+            <h2 id="t-uso" style="font-size:1.15rem">Uso de la app</h2>
+            <p class="texto2 chico" id="uso-desc">La tarjeta que más usas se hace grande en Hoy.</p>
+          </div>
+          <button type="button" class="interruptor" role="switch" aria-checked="${Datos.usoActivo()}" aria-labelledby="t-uso" aria-describedby="uso-desc" data-accion="uso-auto"></button>
+        </div>
+      </section>`;
     Gestos.ordenable(cont.querySelector('#mas-tarjetas'), { pantalla: 'mas' });
     Gestos.fab(() => nuevaMeta(cont), 'Nueva meta');
     pintarRevision(cont);
@@ -80,6 +89,14 @@ const PMas = (() => {
     });
 
     cont.addEventListener('click', (e) => {
+      const uso = e.target.closest('[data-accion="uso-auto"]');
+      if (uso) {
+        const activo = !Datos.usoActivo();
+        Datos.ponerUsoActivo(activo);
+        uso.setAttribute('aria-checked', String(activo));
+        return U.aviso(activo ? 'Hoy se adapta a lo que más usas.' : 'Hoy ya no se adapta a tu uso.');
+      }
+
       const bn = e.target.closest('[data-borrar-nota]');
       if (bn) {
         const antes = Datos.foto();
