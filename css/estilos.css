@@ -112,6 +112,10 @@ svg { display: block; }
 }
 .pantalla:focus { outline: none; }
 .pantalla > div { display: flex; flex-direction: column; gap: 14px; }
+/* Deslizar entre apartados en toda la pantalla: el navegador solo hace scroll vertical
+   y no intenta arrastrar enlaces (eso cancelaba el gesto). */
+.pantalla, .pantalla > div { touch-action: pan-y; -webkit-user-drag: none; }
+a { -webkit-user-drag: none; }
 
 /* ---------- Cabecera ---------- */
 .cabecera {
@@ -310,6 +314,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--acento); ou
 }
 .tarjeta-hoy { padding: 14px; min-width: 0; touch-action: manipulation; cursor: pointer; }
 .tarjeta-hoy.ancha { grid-column: span 2; }
+.tarjeta-hoy.media { grid-column: span 1; min-height: 184px; }
 .tarjeta-hoy:active:not(.levantada) { background: color-mix(in srgb, var(--tarjeta) 94%, var(--texto)); }
 
 /* ---------- Tarjetas que se pueden mover (todas las pantallas) ---------- */
@@ -377,6 +382,63 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--acento); ou
 .barra + .th-linea { margin-top: 8px; }
 .presu-cab input::-webkit-inner-spin-button, .presu-cab input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .presu-cab input { -moz-appearance: textfield; }
+
+/* ---------- Hoy: tarjeta grande (la sección que más usas) y chica de Tareas ---------- */
+.th-etq {
+  font-size: .8rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; white-space: nowrap;
+  background: var(--acento-suave); color: var(--acento); flex-shrink: 0;
+}
+.th-etq.verde { background: var(--verde-suave); color: var(--verde); }
+.th-etq.rojo { background: var(--rojo-suave); color: var(--rojo); }
+/* Tareas grande: 3 columnas (Tarea | Prioridad | Tiempo) */
+.th-cols, .th-fila { display: grid; grid-template-columns: 1fr 3.9rem 4.4rem; column-gap: 6px; align-items: center; }
+.th-cols span {
+  font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--texto2); text-align: center;
+}
+.th-cols span:first-child { text-align: left; }
+.th-tabla { list-style: none; margin: 0; padding: 0; }
+.th-fila { padding: 7px 0; border-bottom: 1px solid var(--linea); }
+.th-fila:last-child { border-bottom: 0; }
+.th-tarea { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.th-circ { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--texto2); flex-shrink: 0; }
+.th-tarea .t, .th-urg .t {
+  font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.th-semana { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--linea); }
+.th-semana p { font-size: .85rem; color: var(--texto2); margin-bottom: 6px; }
+.th-semana b { color: var(--texto); }
+/* Tareas chica */
+.th-num { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+.th-num b { font-family: var(--fuente-titulo); font-size: 2.2rem; font-weight: 750; line-height: 1; letter-spacing: -.02em; }
+.th-num span { font-size: .85rem; color: var(--texto2); }
+.th-sep { border: 0; border-top: 1px solid var(--linea); margin: 10px 0 8px; }
+.th-urg .t { font-size: .92rem; }
+.th-urg .cuando { font-size: .8rem; font-weight: 700; color: var(--texto2); margin-top: 3px; }
+.th-urg .cuando.rojo { color: var(--rojo); }
+.th-urg .cuando.azul { color: var(--acento); }
+/* Hábitos grande */
+.th-hab { display: flex; align-items: center; gap: 16px; }
+.th-hab-lista { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.th-hab-lista li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.th-hab-lista .n { font-weight: 700; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.th-hab-lista li.hecho .n { font-weight: 500; color: var(--texto2); }
+.th-check {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--texto2); flex-shrink: 0;
+  display: grid; place-items: center; color: var(--sobre-acento);
+}
+.th-check svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+li.hecho .th-check { background: var(--acento); border-color: var(--acento); }
+/* Dinero grande */
+.th-din { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: end; }
+.th-din .th-grande { font-size: 1.9rem; }
+.th-din-hoy .th-sub { margin: 2px 0 0; }
+.th-din-mes p { font-size: .85rem; color: var(--texto2); margin-top: 6px; }
+.th-din-mes b { color: var(--texto); }
+.th-cats { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--linea); display: flex; flex-direction: column; gap: 8px; }
+.th-cat .fila { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; margin-bottom: 4px; }
+.th-cat .barra { height: 8px; }
 
 /* Anillo de avance */
 .anillo { display: block; flex-shrink: 0; }
