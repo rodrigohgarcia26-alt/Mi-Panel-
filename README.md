@@ -57,7 +57,7 @@ Después ábrela desde su ícono. Ya funciona sin internet.
 Tus datos viven en el celular, no en GitHub, así que subir archivos nuevos no los borra.
 
 1. Cambia lo que quieras en los archivos.
-2. Abre `sw.js` y sube el número de versión: `const VERSION = 'v3';` → `'v4'` (la siguiente vez `'v5'`, etc.).
+2. Abre `sw.js` y sube el número de versión: `const VERSION = 'v4';` → `'v5'` (la siguiente vez `'v6'`, etc.).
    **Si no cambias este número, el celular seguirá mostrando la versión vieja.**
 3. En GitHub: **Add file → Upload files**, arrastra los archivos cambiados (incluyendo `sw.js`) → **Commit changes**.
 4. Abre la app con internet. La versión nueva se instala sola y la app se recarga una vez.
@@ -75,6 +75,9 @@ Todo se guarda en `localStorage`:
 - `mipanel-orden-tareas`, `mipanel-orden-habitos`, `mipanel-orden-dinero`, `mipanel-orden-mas`: orden de las tarjetas de cada pantalla
   (Ajustes → "Restablecer orden de las tarjetas" las borra).
 - `mipanel-fab`: posición del botón "+" (distancia a la orilla derecha y arriba de la barra inferior), igual en todas las pantallas.
+- `mipanel-uso`: cuántas veces entras a Tareas, Hábitos y Dinero cada día, solo los últimos 30 días
+  (`{"2026-11-19": {"tareas": 2, "habitos": 1, "dinero": 0}}`). La sección con más entradas va grande en Hoy.
+- `mipanel-uso-auto`: `no` si apagaste "Uso de la app" en Más (no se cuenta ni se adapta Hoy). Si no existe, está activado.
 
 Al pasar de la versión 1 a la 2, la app deja una copia intacta de tus datos anteriores en
 `mi-panel-datos-v1-respaldo`, mueve el tema y el orden a sus claves nuevas y agrega la tarjeta "Mañana".
