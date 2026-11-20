@@ -225,16 +225,12 @@ const PTareas = (() => {
           const inp = f.querySelector('#t-texto');
           const texto = inp.value.trim();
           if (!texto) { inp.focus(); return U.aviso('Escribe la tarea.'); }
-          const n = Number(f.querySelector('#t-tiempo').value) || 1;
-          Datos.d.tareas.push({
-            id: U.id(), texto,
-            fecha: U.sumarDias(U.hoy(), n),
-            hora: null,
+          Datos.agregarTarea({
+            texto,
+            dias: Number(f.querySelector('#t-tiempo').value) || 1,
             area: f.querySelector('#t-area').value,
-            prioridad: f.querySelector('input[name="prioridad"]:checked').value === 'Alta' ? 'Alta' : 'Media',
-            hecha: false, hechaEn: null, creada: new Date().toISOString(), ejemplo: false,
+            prioridad: f.querySelector('input[name="prioridad"]:checked').value,
           });
-          Datos.guardar();
           cerrar();
           if (filtro === 'hechas') filtro = 'pendientes';
           pintar(cont);

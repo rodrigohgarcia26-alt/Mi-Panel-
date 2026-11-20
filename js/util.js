@@ -225,6 +225,7 @@ const U = (() => {
     dinero: svg('<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.3"/>'),
     notas: svg('<path d="M6 3.5h9l4 4v13H6z"/><path d="M14.5 3.5v4.5h4.5M9 12.5h7M9 16h5"/>'),
     mas: svg('<path d="M12 5.5v13M5.5 12h13"/>'),
+    calendario: svg('<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
     manana: svg('<path d="M3 17.5h18M6.5 17.5a5.5 5.5 0 0 1 11 0M12 6.5v2.5M5.2 10.2l1.6 1.6M18.8 10.2l-1.6 1.6M7 21h10"/>'),
   };
 

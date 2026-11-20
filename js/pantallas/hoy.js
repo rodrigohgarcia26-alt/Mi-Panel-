@@ -164,7 +164,7 @@ const PHoy = (() => {
       <ul class="th-lista">${Tareas.porPrioridad(siguientes).map(lineaSiguiente).join('')}</ul>`;
   }
 
-  /** Las dos últimas notas. El "+" abre "Nueva nota". */
+  /** Las dos últimas notas. El "+" abre la ventana "Agregar" con "Nota" elegida. */
   function tarjetaNotas() {
     const ultimas = [...Datos.d.notas].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 2);
     const mas = `<button type="button" class="th-agregar" data-accion="nueva-nota" aria-label="Nueva nota"><span>${U.I.mas}</span></button>`;
@@ -210,9 +210,9 @@ const PHoy = (() => {
 
     cont.addEventListener('click', (e) => {
       if (e.target.closest('[data-accion="respaldar"]')) {
-        return Datos.exportar().then(() => { App.refrescar(); U.aviso('Respaldo creado.'); });
+        return Copias.exportarArchivo().then(() => { App.refrescar(); U.aviso('Respaldo creado.'); });
       }
-      if (e.target.closest('[data-accion="nueva-nota"]')) return nuevaNota(cont); // el "+" no abre la pantalla
+      if (e.target.closest('[data-accion="nueva-nota"]')) return agregar('nota'); // el "+" no abre la pantalla
       const t = e.target.closest('.tarjeta-hoy[data-ir]');
       if (t) App.ir(t.dataset.ir);
     });
@@ -222,35 +222,236 @@ const PHoy = (() => {
     });
     // En Hoy se puede empezar a mover una tarjeta también sobre sus listas (como antes).
     Gestos.ordenable(rejilla, { pantalla: 'hoy', listas: false });
+    Gestos.fab(() => agregar(), 'Agregar');
   }
 
-  /** Cuadro "Nueva nota". */
-  function nuevaNota(cont) {
-    U.hoja({
-      titulo: 'Nueva nota',
-      html: `<form class="form" id="f-nota" novalidate>
-          <div class="campo">
-            <label for="nota-texto" class="solo-lector">Nota</label>
-            <input id="nota-texto" type="text" maxlength="2000" placeholder="Escribe tu nota…" autocomplete="off" enterkeyhint="done">
+  // ============================================================
+  // Ventana "Agregar" (botón "+" de Hoy y "+" de la tarjeta Notas).
+  // Guarda con las mismas funciones que usan los formularios de cada pantalla (Datos.agregar…).
+  // ============================================================
+  const OPCIONES = [
+    { id: 'tarea', nombre: 'Tarea' },
+    { id: 'habito', nombre: 'Hábito' },
+    { id: 'dinero', nombre: 'Dinero' },
+    { id: 'nota', nombre: 'Nota' },
+    { id: 'meta', nombre: 'Meta' },
+  ];
+  const AREAS = ['Escuela', 'Trabajo', 'Casa', 'Personal'];
+  const DURACION_AVISO = 1800;
+  let opcionAgregar = 'tarea';  // se queda la última que elegiste
+  let tipoDinero = 'gasto';
+
+  function formAgregar(op) {
+    const campoTexto = (id, etiqueta, ph, max) => `<div class="campo">
+        <label for="${id}">${etiqueta}</label>
+        <input id="${id}" type="text" maxlength="${max}" placeholder="${ph}" autocomplete="off" enterkeyhint="done">
+      </div>`;
+    switch (op) {
+      case 'tarea':
+        return `${campoTexto('ag-texto', 'Qué tienes que hacer', 'Ej. Entregar el reporte', 160)}
+          <div class="fila2">
+            <div class="campo"><label for="ag-tiempo">Tiempo</label>
+              <select id="ag-tiempo">${[1, 2, 3, 4, 5, 6, 7].map((n) => `<option value="${n}">${U.plural(n, 'día', 'días')}</option>`).join('')}</select></div>
+            <div class="campo"><label for="ag-area">Área</label>
+              <select id="ag-area">${AREAS.map((x) => `<option>${x}</option>`).join('')}</select></div>
           </div>
-          <button type="submit" class="btn primario ancho">Guardar</button>
-        </form>`,
+          <fieldset class="segmentado">
+            <legend>Prioridad</legend>
+            <div class="segmentos">
+              ${['Media', 'Alta'].map((p) => `<label><input type="radio" name="ag-prio" value="${p}" ${p === 'Media' ? 'checked' : ''}><span>${p}</span></label>`).join('')}
+            </div>
+          </fieldset>
+          <button class="btn primario ancho" type="submit">Guardar tarea</button>`;
+      case 'habito':
+        return `${campoTexto('ag-texto', 'Hábito', 'Ej. Caminar 20 minutos', 60)}
+          <button class="btn primario ancho" type="submit">Guardar</button>`;
+      case 'dinero':
+        return `<fieldset class="segmentado">
+            <legend class="solo-lector">Tipo de movimiento</legend>
+            <div class="segmentos">
+              <label><input type="radio" name="ag-tipo" value="gasto" ${tipoDinero === 'gasto' ? 'checked' : ''}><span>Gasto</span></label>
+              <label><input type="radio" name="ag-tipo" value="ingreso" ${tipoDinero === 'ingreso' ? 'checked' : ''}><span>Ingreso</span></label>
+            </div>
+          </fieldset>
+          <div class="fila2">
+            <div class="campo"><label for="ag-monto">Monto</label>
+              <div class="campo-dinero"><span aria-hidden="true">$</span><input id="ag-monto" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div></div>
+            <div class="campo"><label for="ag-cat">Categoría</label><select id="ag-cat">${categorias()}</select></div>
+          </div>
+          ${campoTexto('ag-nota', 'Nota (opcional)', 'Ej. Tacos con amigos', 80)}
+          <button class="btn primario ancho" type="submit">Guardar</button>`;
+      case 'nota':
+        return `<div class="campo"><label for="ag-texto" class="solo-lector">Nota</label>
+            <input id="ag-texto" type="text" maxlength="2000" placeholder="Escribe tu nota…" autocomplete="off" enterkeyhint="done"></div>
+          <button class="btn primario ancho" type="submit">Guardar</button>`;
+      default: // meta
+        return `<div class="campo"><label for="ag-texto" class="solo-lector">Meta</label>
+            <input id="ag-texto" type="text" maxlength="80" placeholder="Una meta nueva" autocomplete="off" enterkeyhint="done"></div>
+          <button class="btn primario ancho" type="submit">Guardar</button>`;
+    }
+  }
+  const categorias = () => (tipoDinero === 'gasto' ? Dinero.CAT_GASTO : Dinero.CAT_INGRESO).map((c) => `<option>${c}</option>`).join('');
+
+  /** Guarda lo del formulario. Regresa el aviso, o null si falta un campo obligatorio. */
+  function guardarAgregar(op, f) {
+    const texto = (f.querySelector('#ag-texto') || {}).value;
+    const t = (texto || '').trim();
+    const falta = (sel) => { const el = f.querySelector(sel); if (el) el.focus(); return null; };
+    switch (op) {
+      case 'tarea':
+        if (!t) return falta('#ag-texto');
+        Datos.agregarTarea({
+          texto: t,
+          dias: Number(f.querySelector('#ag-tiempo').value) || 1,
+          area: f.querySelector('#ag-area').value,
+          prioridad: f.querySelector('input[name="ag-prio"]:checked').value,
+        });
+        return 'Tarea guardada';
+      case 'habito':
+        if (!t) return falta('#ag-texto');
+        Datos.agregarHabito(t);
+        return 'Hábito guardado';
+      case 'dinero': {
+        const monto = Math.round(Number(f.querySelector('#ag-monto').value) * 100) / 100;
+        if (!(monto > 0)) return falta('#ag-monto');
+        Datos.agregarMovimiento({ tipo: tipoDinero, monto, categoria: f.querySelector('#ag-cat').value, nota: f.querySelector('#ag-nota').value.trim() });
+        return tipoDinero === 'gasto' ? 'Gasto guardado' : 'Ingreso guardado';
+      }
+      case 'nota':
+        if (!t) return falta('#ag-texto');
+        Datos.agregarNota(t);
+        return 'Nota guardada';
+      default:
+        if (!t) return falta('#ag-texto');
+        Datos.agregarMeta(t);
+        return 'Meta guardada';
+    }
+  }
+
+  /** Abre la ventana "Agregar". Sin "op", se queda con la última opción elegida. */
+  function agregar(op) {
+    if (op) opcionAgregar = op;
+    U.hoja({
+      titulo: 'Agregar',
+      html: `<div class="ag-opciones" role="group" aria-label="Qué quieres agregar">
+          ${OPCIONES.map((o) => `<button type="button" class="ag-op" data-op="${o.id}" aria-pressed="${o.id === opcionAgregar}">${o.nombre}</button>`).join('')}
+        </div>
+        <form class="form" id="f-agregar" novalidate>${formAgregar(opcionAgregar)}</form>`,
       alAbrir(panel, cerrar) {
-        panel.querySelector('#f-nota').addEventListener('submit', (e) => {
+        const form = panel.querySelector('#f-agregar');
+        panel.querySelector('.ag-opciones').addEventListener('click', (e) => {
+          const b = e.target.closest('[data-op]');
+          if (!b || b.dataset.op === opcionAgregar) return;
+          opcionAgregar = b.dataset.op;
+          panel.querySelectorAll('.ag-op').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          form.innerHTML = formAgregar(opcionAgregar);
+          const primero = form.querySelector('input[type="text"], input[type="number"]');
+          if (primero) primero.focus({ preventScroll: true });
+        });
+        form.addEventListener('change', (e) => {
+          if (e.target.name !== 'ag-tipo') return;
+          tipoDinero = e.target.value;
+          form.querySelector('#ag-cat').innerHTML = categorias();
+        });
+        form.addEventListener('submit', (e) => {
           e.preventDefault();
-          const inp = panel.querySelector('#nota-texto');
-          const texto = inp.value.trim();
-          if (!texto) { inp.focus(); return U.aviso('Escribe algo antes de guardar.'); }
-          Datos.d.notas.push({ id: U.id(), texto, fecha: new Date().toISOString(), ejemplo: false });
-          Datos.guardar();
+          const aviso = guardarAgregar(opcionAgregar, form);
+          if (!aviso) return; // falta un campo obligatorio: no se guarda
           cerrar();
-          const el = cont.querySelector('.tarjeta-hoy[data-tarjeta="notas"]');
-          if (el) el.innerHTML = tarjetaNotas();
-          U.aviso('Nota guardada.');
+          App.refrescar();
+          U.aviso(aviso, { duracion: DURACION_AVISO });
         });
       },
     });
   }
 
-  return { titulo: 'Hoy', render };
+  // ============================================================
+  // Calendario (se abre al tocar la fecha de arriba)
+  // ============================================================
+  const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const NOMBRES_DIA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  /** Cuántas tareas caen en cada día: su fecha guardada (hoy + días de "tiempo de entrega" al crearla). */
+  function tareasPorDia() {
+    const n = {};
+    Datos.d.tareas.forEach((t) => {
+      const f = t.fecha || (Number(t.dias) > 0 ? U.sumarDias(U.hoy(), Number(t.dias)) : null);
+      if (f) n[f] = (n[f] || 0) + 1;
+    });
+    return n;
+  }
+
+  function abrirCalendario() {
+    cerrarCalendario();
+    const hoy = U.hoy();
+    let sel = hoy;
+    let mes = U.mesDe(hoy);
+    const conteo = tareasPorDia();
+    const antes = document.activeElement;
+
+    const raiz = document.createElement('div');
+    raiz.id = 'mp-cal';
+    raiz.className = 'cal-velo';
+    raiz.innerHTML = `<div class="cal" role="dialog" aria-modal="true" aria-labelledby="cal-t">
+        <div class="cal-cab">
+          <button type="button" class="btn-icono" data-cal="-1" aria-label="Mes anterior">${U.I.izq}</button>
+          <h2 id="cal-t" class="cal-titulo" aria-live="polite"></h2>
+          <button type="button" class="btn-icono" data-cal="1" aria-label="Mes siguiente">${U.I.der}</button>
+          <button type="button" class="btn-icono cal-x" data-cal="cerrar" aria-label="Cerrar">${U.I.x}</button>
+        </div>
+        <div class="cal-sem" aria-hidden="true">${DIAS_SEMANA.map((d) => `<span>${d}</span>`).join('')}</div>
+        <div class="cal-rejilla" role="grid"></div>
+        <div class="cal-pie">
+          <div><p class="cal-dia fuerte"></p><p class="cal-n texto2 chico"></p></div>
+          <button type="button" class="btn chico" data-cal="hoy">Hoy</button>
+        </div>
+      </div>`;
+    document.body.appendChild(raiz);
+
+    function pintar() {
+      raiz.querySelector('.cal-titulo').textContent = U.nombreMes(mes);
+      const primero = U.aFecha(`${mes}-01`);
+      const hueco = (primero.getDay() + 6) % 7; // la semana empieza en lunes
+      let html = '<span></span>'.repeat(hueco);
+      for (let i = 1; i <= U.diasEnMes(mes); i++) {
+        const f = `${mes}-${String(i).padStart(2, '0')}`;
+        const n = conteo[f] || 0;
+        const clases = ['cal-d', f === hoy ? 'hoy' : '', f === sel ? 'sel' : ''].join(' ');
+        html += `<button type="button" class="${clases}" data-f="${f}" aria-pressed="${f === sel}"
+          aria-label="${U.fechaLarga(f)}${f === hoy ? ', hoy' : ''}${n ? `, ${U.plural(n, 'tarea', 'tareas')}` : ''}">${i}${n ? '<span class="cal-punto" aria-hidden="true"></span>' : ''}</button>`;
+      }
+      raiz.querySelector('.cal-rejilla').innerHTML = html;
+      const d = U.aFecha(sel);
+      raiz.querySelector('.cal-dia').textContent = `${NOMBRES_DIA[(d.getDay() + 6) % 7]}, ${d.getDate()} de ${U.MESES[d.getMonth()]}`;
+      const n = conteo[sel] || 0;
+      raiz.querySelector('.cal-n').textContent = n ? U.plural(n, 'tarea', 'tareas') : 'Sin tareas';
+    }
+
+    raiz.addEventListener('click', (e) => {
+      if (e.target === raiz) return cerrarCalendario();
+      const b = e.target.closest('[data-cal], [data-f]');
+      if (!b) return;
+      if (b.dataset.f) { sel = b.dataset.f; pintar(); return raiz.querySelector(`[data-f="${sel}"]`).focus(); }
+      const a = b.dataset.cal;
+      if (a === 'cerrar') return cerrarCalendario();
+      if (a === 'hoy') { sel = hoy; mes = U.mesDe(hoy); return pintar(); }
+      mes = U.sumarMeses(mes, Number(a));
+      pintar();
+    });
+    const teclas = (e) => { if (e.key === 'Escape') cerrarCalendario(); };
+    document.addEventListener('keydown', teclas);
+    window.addEventListener('hashchange', cerrarCalendario);
+    cerrarCal = () => {
+      document.removeEventListener('keydown', teclas);
+      window.removeEventListener('hashchange', cerrarCalendario);
+      raiz.remove();
+      if (antes && antes.isConnected && antes.focus) antes.focus({ preventScroll: true });
+    };
+    pintar();
+    raiz.querySelector('.cal-x').focus();
+  }
+  let cerrarCal = null;
+  function cerrarCalendario() { if (cerrarCal) { const c = cerrarCal; cerrarCal = null; c(); } }
+
+  return { titulo: 'Hoy', render, abrirCalendario };
 })();

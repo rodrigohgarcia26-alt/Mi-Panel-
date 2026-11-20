@@ -38,9 +38,13 @@ const App = (() => {
     let izq;
     if (nombre === 'hoy') {
       const h = U.hoy();
+      // La fecha es un botón que abre el calendario.
       izq = `<div class="cab-hoy">
-          <h1 class="dia">${U.cap(U.nombreDia(h))} ${U.aFecha(h).getDate()}</h1>
-          <p class="mes">${U.nombreMes(U.mesDe(h))}</p>
+          <h1 class="cab-h1"><button type="button" class="cab-fecha" data-accion="calendario" aria-label="Abrir calendario">
+            <span class="cab-fecha-txt"><span class="dia">${U.cap(U.nombreDia(h))} ${U.aFecha(h).getDate()}</span>
+            <span class="mes">${U.nombreMes(U.mesDe(h))}</span></span>
+            <span class="cab-cal" aria-hidden="true">${U.I.calendario}</span>
+          </button></h1>
           <p class="pista-mover">mantén una tarjeta para moverla</p>
         </div>`;
     } else {
@@ -57,6 +61,7 @@ const App = (() => {
     aplicarTema();
   }
   cab.addEventListener('click', (e) => {
+    if (e.target.closest('[data-accion="calendario"]')) return PHoy.abrirCalendario();
     if (e.target.closest('[data-accion="tema"]')) {
       ponerTema(temaEfectivo() === 'oscuro' ? 'claro' : 'oscuro');
       if (actual === 'ajustes') refrescar();
@@ -165,6 +170,8 @@ const App = (() => {
     window.addEventListener('offline', () => { if (actual === 'ajustes') refrescar(); });
     ir();
     Datos.pedirPersistencia();
+    // Copia automática si ya pasaron las 3:00 am y no hay copia desde entonces (también al volver a la app).
+    Copias.iniciar();
     registrarSW();
   }
 

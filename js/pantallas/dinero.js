@@ -18,12 +18,13 @@ const Dinero = (() => {
     const r = gastado / presupuesto;
     return r > 1 ? 'rojo' : r >= 0.8 ? 'ambar' : '';
   }
-  return { delMes, resumenMes, colorBarra };
+  const CAT_GASTO = ['Comida', 'Transporte', 'Escuela', 'Ocio', 'Casa', 'Salud', 'Otros'];
+  const CAT_INGRESO = ['Familia', 'Beca', 'Trabajo', 'Ventas', 'Otros'];
+  return { delMes, resumenMes, colorBarra, CAT_GASTO, CAT_INGRESO };
 })();
 
 const PDinero = (() => {
-  const CAT_GASTO = ['Comida', 'Transporte', 'Escuela', 'Ocio', 'Casa', 'Salud', 'Otros'];
-  const CAT_INGRESO = ['Familia', 'Beca', 'Trabajo', 'Ventas', 'Otros'];
+  const { CAT_GASTO, CAT_INGRESO } = Dinero;
   let mes = null;
   let tipo = 'gasto';
 
@@ -113,14 +114,11 @@ const PDinero = (() => {
           const monto = Math.round(Number(montoEl.value) * 100) / 100;
           if (!(monto > 0)) { montoEl.focus(); return U.aviso('Escribe un monto mayor a $0.'); }
           const fecha = panel.querySelector('#m-fecha').value || U.hoy();
-          Datos.d.movimientos.push({
-            id: U.id(), tipo, monto,
+          Datos.agregarMovimiento({
+            tipo, monto, fecha,
             categoria: panel.querySelector('#m-cat').value,
-            fecha,
             nota: panel.querySelector('#m-nota').value.trim(),
-            ejemplo: false,
           });
-          Datos.guardar();
           cerrar();
           mes = U.mesDe(fecha); // muestra el mes del movimiento recién guardado
           pintar(cont);

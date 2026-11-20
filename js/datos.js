@@ -240,15 +240,78 @@ const Datos = (() => {
     d.marcasEjemplo = d.marcasEjemplo.filter(([h, x]) => !(h === hid && x === f));
   }
 
-  // ---------- Respaldo ----------
-  function exportar() {
-    d.ultimoRespaldo = new Date().toISOString();
+  // ---------- Agregar (las usan los formularios de cada pantalla y la ventana "Agregar" de Hoy) ----------
+  /** Tarea nueva: la fecha de entrega es hoy + "dias". */
+  function agregarTarea({ texto, dias = 1, area = 'Escuela', prioridad = 'Media' }) {
+    const t = {
+      id: U.id(), texto,
+      fecha: U.sumarDias(U.hoy(), Number(dias) || 1),
+      hora: null, area,
+      prioridad: prioridad === 'Alta' ? 'Alta' : 'Media',
+      hecha: false, hechaEn: null, creada: new Date().toISOString(), ejemplo: false,
+    };
+    d.tareas.push(t);
     guardar();
-    const texto = JSON.stringify(d, null, 2);
-    const nombre = `mi-panel-respaldo-${U.hoy()}.json`;
+    return t;
+  }
+  function agregarHabito(nombre) {
+    const h = { id: U.id(), nombre, dias: {}, creado: new Date().toISOString() };
+    d.habitos.push(h);
+    guardar();
+    return h;
+  }
+  function agregarMovimiento({ tipo, monto, categoria, fecha = U.hoy(), nota = '' }) {
+    const m = { id: U.id(), tipo: tipo === 'ingreso' ? 'ingreso' : 'gasto', monto, categoria, fecha, nota, ejemplo: false };
+    d.movimientos.push(m);
+    guardar();
+    return m;
+  }
+  function agregarNota(texto) {
+    const n = { id: U.id(), texto, fecha: new Date().toISOString(), ejemplo: false };
+    d.notas.push(n);
+    guardar();
+    return n;
+  }
+  function agregarMeta(nombre) {
+    const m = { id: U.id(), nombre, avance: 0 };
+    d.metas.push(m);
+    guardar();
+    return m;
+  }
+
+  // ---------- Secciones (para las copias de seguridad) ----------
+  // Qué campos de los datos van en cada sección de "Qué se guarda".
+  const SECCIONES = {
+    tareas: ['tareas'],
+    habitos: ['habitos', 'marcasEjemplo'],
+    dinero: ['movimientos', 'presupuesto'],
+    mas: ['metas', 'notas', 'revisiones', 'animo'],
+  };
+  /** Copia (independiente) de las secciones pedidas: {tareas: {tareas: [...]}, dinero: {...}, ...}. */
+  function extraerSecciones(lista) {
+    const out = {};
+    lista.filter((s) => SECCIONES[s]).forEach((s) => {
+      out[s] = {};
+      SECCIONES[s].forEach((k) => { out[s][k] = JSON.parse(JSON.stringify(d[k])); });
+    });
+    return out;
+  }
+  /** Reemplaza solo las secciones que vengan en "datos" (las demás se quedan como están). */
+  function reemplazarSecciones(datos) {
+    const nuevo = JSON.parse(JSON.stringify(d));
+    Object.keys(SECCIONES).forEach((s) => {
+      if (!datos[s] || typeof datos[s] !== 'object') return;
+      SECCIONES[s].forEach((k) => { if (k in datos[s]) nuevo[k] = datos[s][k]; });
+    });
+    d = normalizar(nuevo);
+    return guardar();
+  }
+
+  // ---------- Archivo de respaldo ----------
+  /** Descarga el archivo (en iPhone abre el menú "Compartir" para guardarlo en Archivos). */
+  function compartirArchivo(texto, nombre) {
     const archivo = new File([texto], nombre, { type: 'application/json' });
     const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    // En iPhone se abre el menú "Compartir" para guardarlo en Archivos; en lo demás se descarga.
     if (esIOS && navigator.canShare && navigator.canShare({ files: [archivo] })) {
       return navigator.share({ files: [archivo], title: 'Respaldo de Mi Panel' }).catch(() => descargar(archivo));
     }
@@ -262,17 +325,9 @@ const Datos = (() => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
-
-  /** Lee y revisa un archivo de respaldo. Regresa los datos o lanza un Error con un mensaje claro. */
-  async function leerRespaldo(archivo) {
-    let obj;
-    try { obj = JSON.parse(await archivo.text()); } catch (e) { throw new Error('El archivo no es un respaldo válido (no es JSON).'); }
-    if (!obj || typeof obj !== 'object' || typeof obj.version !== 'number' || !Array.isArray(obj.tareas)) {
-      throw new Error('El archivo no parece un respaldo de Mi Panel.');
-    }
-    if (obj.version > VERSION) throw new Error('Este respaldo es de una versión más nueva de la app. Actualiza la app primero.');
-    return obj;
-  }
+  /** Marca la fecha del último archivo exportado (lo usa el aviso de Hoy). */
+  function marcarRespaldo() { d.ultimoRespaldo = new Date().toISOString(); guardar(); }
+  /** Archivos del formato anterior (todos los datos en un solo objeto). */
   function importar(obj) { d = normalizar(obj); guardar(); }
 
   async function pedirPersistencia() {
@@ -288,7 +343,8 @@ const Datos = (() => {
   return {
     get d() { return d; },
     cargar, guardar, foto, restaurar, borrarEjemplos, hayEjemplos, borrarTodo, olvidarMarcaEjemplo,
-    exportar, leerRespaldo, importar, pedirPersistencia, VERSION,
+    agregarTarea, agregarHabito, agregarMovimiento, agregarNota, agregarMeta,
+    SECCIONES, extraerSecciones, reemplazarSecciones, compartirArchivo, marcarRespaldo, importar, pedirPersistencia, VERSION,
     tema, ponerTema, orden, ponerOrden, restablecerOrdenes,
     usoActivo, ponerUsoActivo, contarUso, totalesUso, seccionGrande,
   };

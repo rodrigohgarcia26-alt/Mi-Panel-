@@ -147,6 +147,8 @@ const Gestos = (() => {
   // ============================================================
   const CLAVE_FAB = 'mipanel-fab';
   const TAM = 52, MARGEN = 8, ESPERA_FAB = 350;
+  // Límites de la posición (esquina de arriba a la izquierda, en px).
+  const X_MIN = 8, X_MAX = 330, Y_MIN = 72, Y_MAX = 712;
   const fabEl = document.getElementById('fab');
   let fabAccion = null;
   let f = null;              // estado del toque sobre el botón
@@ -164,8 +166,8 @@ const Gestos = (() => {
   /** Coloca el botón dentro de la pantalla y arriba de la barra inferior. */
   function colocar(left, top) {
     const ancho = document.documentElement.clientWidth;
-    left = limitar(left, MARGEN, ancho - TAM - MARGEN);
-    top = limitar(top, MARGEN + 4, arribaNav() - TAM - MARGEN);
+    left = limitar(limitar(left, MARGEN, ancho - TAM - MARGEN), X_MIN, X_MAX);
+    top = limitar(limitar(top, MARGEN + 4, arribaNav() - TAM - MARGEN), Y_MIN, Y_MAX);
     fabEl.style.left = `${left}px`;
     fabEl.style.top = `${top}px`;
     fabEl.style.right = 'auto';
@@ -242,7 +244,7 @@ const Gestos = (() => {
   //    pulsación larga para mover una tarjeta y no cambia de pantalla.
   // Funciona en toda la pantalla (también sobre las tarjetas y sus listas).
   // ============================================================
-  const NO_DESLIZAR = 'input, textarea, select, [contenteditable], .fab, .grafica-desliza, .hoja-velo, .modal-velo';
+  const NO_DESLIZAR = 'input, textarea, select, [contenteditable], .fab, .grafica-desliza, .hoja-velo, .modal-velo, #mp-cal';
   const DESLIZAR_MIN_PX = 40;
   const DESLIZAR_PROPORCION = 1.2;
   const DESLIZAR_MAX_MS = 1000;
@@ -253,7 +255,7 @@ const Gestos = (() => {
     let t = null;
     document.addEventListener('touchstart', (e) => {
       t = null;
-      if (e.touches.length !== 1 || ocupado || document.body.classList.contains('hoja-abierta')) return;
+      if (e.touches.length !== 1 || ocupado || document.body.classList.contains('hoja-abierta') || document.getElementById('mp-cal')) return;
       if (e.target.closest && e.target.closest(NO_DESLIZAR)) return;
       const p = e.touches[0];
       t = { x: p.clientX, y: p.clientY, t: Date.now(), movio: false };

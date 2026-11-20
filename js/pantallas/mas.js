@@ -81,8 +81,7 @@ const PMas = (() => {
       const inp = cont.querySelector('#nota-nueva');
       const texto = inp.value.trim();
       if (!texto) { inp.focus(); return U.aviso('Escribe algo antes de guardar.'); }
-      Datos.d.notas.push({ id: U.id(), texto, fecha: new Date().toISOString(), ejemplo: false });
-      Datos.guardar();
+      Datos.agregarNota(texto);
       inp.value = '';
       pintarNotas(cont);
       U.aviso('Nota guardada.');
@@ -180,8 +179,7 @@ const PMas = (() => {
           const inp = panel.querySelector('#meta-nombre');
           const nombre = inp.value.trim();
           if (!nombre) { inp.focus(); return U.aviso('Escribe el nombre de la meta.'); }
-          Datos.d.metas.push({ id: U.id(), nombre, avance: 0 });
-          Datos.guardar();
+          Datos.agregarMeta(nombre);
           cerrar();
           pintarMetas(cont);
           U.aviso('Meta agregada.');

@@ -96,8 +96,7 @@ const PHabitos = (() => {
           const inp = panel.querySelector('#h-nombre');
           const nombre = inp.value.trim();
           if (!nombre) { inp.focus(); return U.aviso('Escribe el nombre del hábito.'); }
-          Datos.d.habitos.push({ id: U.id(), nombre, dias: {}, creado: new Date().toISOString() });
-          Datos.guardar();
+          Datos.agregarHabito(nombre);
           cerrar();
           pintar(cont);
           U.aviso('Hábito agregado.');
