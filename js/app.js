@@ -7,9 +7,8 @@ const App = (() => {
   const PANTALLAS = { hoy: PHoy, tareas: PTareas, habitos: PHabitos, dinero: PDinero, mas: PMas, ajustes: PAjustes };
   const cab = document.getElementById('cabecera');
   const main = document.getElementById('pantalla');
-  const nav = document.getElementById('nav');
   const medioOscuro = window.matchMedia('(prefers-color-scheme: dark)');
-  // Orden para deslizar entre apartados (Ajustes no entra).
+  // Orden para deslizar entre apartados (Ajustes no entra). No depende de ninguna barra.
   const ORDEN_DESLIZAR = ['hoy', 'tareas', 'habitos', 'dinero', 'mas'];
   let actual = null;
   let fechaPintada = U.hoy();
@@ -80,7 +79,7 @@ const App = (() => {
     document.title = nombre === 'hoy' ? 'Mi Panel' : `${PANTALLAS[nombre].titulo} · Mi Panel`;
     U.cerrarHoja();
     pintarCabecera(nombre);
-    Gestos.fab(null); // cada pantalla que lo usa vuelve a mostrar el botón "+"
+    Gestos.fab(null); // cada pantalla pone su acción; sin acción (Ajustes), el toque abre el menú
     const cont = document.createElement('div');
     main.replaceChildren(cont);
     PANTALLAS[nombre].render(cont);
@@ -90,10 +89,6 @@ const App = (() => {
       main.classList.add(clase);
       setTimeout(() => main.classList.remove(clase), 200);
     }
-    nav.querySelectorAll('a').forEach((a) => {
-      if (a.dataset.seccion === nombre) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
     if (cambio) { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
   }
   /** Vuelve a dibujar la pantalla actual (por ejemplo, después de importar datos). */
